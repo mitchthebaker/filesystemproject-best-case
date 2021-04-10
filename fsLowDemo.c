@@ -67,9 +67,23 @@ int main (int argc, char *argv[])
 	// Initialize our VCB structure 
 	VCB * aVCB;
 
-	// Initialize the parameters for our VCB structure 
-	initVCB(aVCB, volumeSize, blockSize);
-	loadVCB(aVCB);
+	// Error testing to determine whether VCB has been formatted or not 
+	//
+	// If myVCB_Ptr's 'magicNumber' is initialized, then our VCB has been formatted 
+	if(aVCB->magicNumber == MAGIC_NUMBER) {
+
+		printf("VCB initialized.\n");
+	}
+
+	// Otherwise, VCB is not initialized. Run initVCB() and loadVCB()
+	else {
+		
+		// Initialize the parameters for our VCB structure 
+		initVCB(aVCB, volumeSize, blockSize);
+		loadVCB(aVCB);
+	}
+
+	printf("magic number of VCB: %d\n", aVCB->magicNumber);
 		
 	free (buf);
 	free(buf2);
