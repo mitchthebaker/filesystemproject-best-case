@@ -18,11 +18,11 @@
 #define MAGIC_NUMBER 0x20214150
 
 typedef struct VCB {
-    uint64_t numberOfBlocks; // We need to know the total number of blocks (Volume size / block size) 
-    uint64_t sizeOfBlock;    // We need to know the size of each block (512)
-    int LBA_indexOf_rootDir; // Important so we know where the root dir starts in the LBA 
+    uint64_t numberOfBlocks;   // We need to know the total number of blocks (Volume size / block size) 
+    uint64_t sizeOfBlock;      // We need to know the size of each block (512)
+    int LBA_indexOf_rootDir;   // Important so we know where the root dir starts in the LBA 
     int LBA_indexOf_freeSpace; // We must know where the freespace begins in the LBA 
-    int magicNumber; // We use this number to determine if our VCB is initialized
+    int magicNumber;           // We use this number to determine if our VCB is initialized
 } VCB;
 
 // The purpose of 'initVCB' is to initialize all of the parameters within

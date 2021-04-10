@@ -26,41 +26,39 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
     aVCB_ptr->sizeOfBlock = blockSize;
     aVCB_ptr->magicNumber = MAGIC_NUMBER;
 
-    //printf("magicNum: %d\n", aVCB_ptr->magicNumber);
-    //printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
-
     // TODO's
     //
     // aVCB_ptr->LBA_indexOf_rootDir = index where root dir 
     // aVCB_ptr->LBA_indexOf_freeSpace = index of free space 
 
-    // Error condition to determine if any of the parameters we set for our VCB
-    // are not greater than 0 
-    if(!(aVCB_ptr->numberOfBlocks >= 0) || !(aVCB_ptr->sizeOfBlock >= 0) || !(aVCB_ptr->magicNumber >= 0)) {
-        return 0;
-    }
-    else {
-        return -1;
-    }
+    // Determine if any of the parameters we set for our VCB are not greater than 0
+    // If true, then invalid values exist
+    //
+    // Return -1 if failed, otherwise return 0 (OK)
+    return (!(aVCB_ptr->numberOfBlocks >= 0) || !(aVCB_ptr->sizeOfBlock >= 0) 
+         || !(aVCB_ptr->magicNumber >= 0)) ? -1 : 0;
 }
 
 // Load our VCB into the LBA at logical block 0
 int loadVCB(VCB * aVCB_ptr) {
 
-    //aVCB_ptr = malloc(MINBLOCKSIZE);
+    // Allocate 512 bytes and read block 0 from LBA
     char * aBuffer = malloc(MINBLOCKSIZE);
     uint64_t retRead = LBAread(aBuffer, 1, 0);
-
     printf("\nBlock 0 of volume: %s\n", aBuffer);
 
-    //printf("magicNum: %d\n", aVCB_ptr->magicNumber);
-    //printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
-
+    // Write our VCB struct to logical block 0
     uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
 
+    // Lets check if our VCB was written to the LBA
     LBAread(aBuffer, 1, 0);
 
     printf("Block 0 of volume: %s\n", aBuffer);
 
+    // Cleanup
+    free(aBuffer);
+
+    // 'blocksWritten' will be 1 if the write was successful, therefore return 0 (OK)
+    // -1 will be returned if the write to disk failed
     return (blocksWritten != 1) ? -1 : 0;
 }
