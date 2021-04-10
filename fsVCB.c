@@ -26,6 +26,9 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
     aVCB_ptr->sizeOfBlock = blockSize;
     aVCB_ptr->magicNumber = MAGIC_NUMBER;
 
+    //printf("magicNum: %d\n", aVCB_ptr->magicNumber);
+    //printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
+
     // TODO's
     //
     // aVCB_ptr->LBA_indexOf_rootDir = index where root dir 
@@ -44,7 +47,20 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
 // Load our VCB into the LBA at logical block 0
 int loadVCB(VCB * aVCB_ptr) {
 
-    aVCB_ptr = malloc(MINBLOCKSIZE);
+    //aVCB_ptr = malloc(MINBLOCKSIZE);
+    char * aBuffer = malloc(MINBLOCKSIZE);
+    uint64_t retRead = LBAread(aBuffer, 1, 0);
 
-    return -1;
+    printf("\nBlock 0 of volume: %s\n", aBuffer);
+
+    //printf("magicNum: %d\n", aVCB_ptr->magicNumber);
+    //printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
+
+    uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
+
+    LBAread(aBuffer, 1, 0);
+
+    printf("Block 0 of volume: %s\n", aBuffer);
+
+    return (blocksWritten != 1) ? -1 : 0;
 }
