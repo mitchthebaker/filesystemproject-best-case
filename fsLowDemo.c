@@ -85,12 +85,13 @@ int main (int argc, char *argv[])
 	}
 
 	// Test to see if VCB is initialized with default params
-	printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
+	printf("\nnumBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
     printf("sizeOfBlocks: %ld\n", aVCB_ptr->sizeOfBlock);
     printf("magic num: %ld\n", aVCB_ptr->magicNumber);
-		
+	
+	free (aVCB_ptr);
 	free (buf);
-	free(buf2);
+	free (buf2);
 	closePartitionSystem();
 	return 0;	
 	}
