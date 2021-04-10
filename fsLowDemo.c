@@ -25,6 +25,7 @@
 #include <time.h>
 #include "fsLow.h"
 #include "mfs.h"
+#include "fsVCB.h"
 
 int main (int argc, char *argv[])
 	{	
