@@ -13,9 +13,13 @@
 *
 **************************************************************/
 
+#include "fsLow.h"
+
+#define MAGIC_NUMBER 0x20214150
+
 typedef struct VCB {
-    int numberOfBlocks; // We need to know the total number of blocks (Volume size / block size) 
-    int sizeOfBlock;    // We need to know the size of each block (512)
+    uint64_t numberOfBlocks; // We need to know the total number of blocks (Volume size / block size) 
+    uint64_t sizeOfBlock;    // We need to know the size of each block (512)
     int LBA_indexOf_rootDir; // Important so we know where the root dir starts in the LBA 
     int LBA_indexOf_freeSpace; // We must know where the freespace begins in the LBA 
     int magicNumber; // We use this number to determine if our VCB is initialized
@@ -25,11 +29,10 @@ typedef struct VCB {
 // the 'VCB' structure. 
 //
 // Return a value of 0 upon success, -1 otherwise. 
-int initVCB(VCB aVCB);
+int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize);
 
 // The purpose of 'loadVCB' is to load our 'VCB' structure into the LBA at block 0.
 //
 // Return a value of 0 upon success, -1 otherwise.
-int loadVCB(VCB aVCB);
+int loadVCB(VCB * aVCB_ptr);
 
-#define MAGIC_NUMBER 0x20214150 

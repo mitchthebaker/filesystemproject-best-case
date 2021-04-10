@@ -63,6 +63,13 @@ int main (int argc, char *argv[])
 		}
 	else
 		printf("FAILURE on Write/Read\n");
+	
+	// Initialize our VCB structure 
+	VCB * aVCB;
+
+	// Initialize the parameters for our VCB structure 
+	initVCB(aVCB, volumeSize, blockSize);
+	loadVCB(aVCB);
 		
 	free (buf);
 	free(buf2);
