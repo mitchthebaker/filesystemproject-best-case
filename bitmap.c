@@ -12,9 +12,9 @@ void map_setBit(unsigned char* c, int bit, int pos){
     *c ^= (-bit ^ *c) & (1 << pos);
 }
 
-int map_set(struct bitmap_t* bitmap, int val, int index){
+int map_set(struct bitmap_t* bitmap, int val, int i){
 
-    if (index > MAX_BITS)
+    if (i > MAX_BITS)
         return -1;
 
     map_setBit(&bitmap->array[CHAR_OFFSET(i)], val, BIT_OFFSET(i));
