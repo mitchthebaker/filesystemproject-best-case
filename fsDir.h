@@ -13,21 +13,23 @@
 **************************************************************/
 #include "fsLow.h"
 #include <sys/stat.h>
+#define MAX_NUM_ENTRIES 10
+#define MAX_NAME_LEN 30
 
-//do i need this? Directory structure --> root directory to initialize?
+//Directory structure --> root directory to initialize
 typedef struct Directory {
     char name;
     int size;
-    d_entry entries[];      //should initialize this way (dynamically allocate) d_entry * entries or with size in it
+    d_entry *entries;      //should initialize this way (dynamically allocate) d_entry * entries
 
 } Directory;
 
 
-//directory should contain array of entries ?
+//directory should contain array of entries 
 typedef struct d_entry {
     ino_t d_ino;                // file serial #
-    char d_name;                // name of entry 
-    char d_name_len;            // length of entry name
+    char d_name[MAX_NAME_LEN];  // name of entry 
+    //char d_name_len;            // length of entry name
     char d_type;               // type of entry
     uint16_t d_len;           // length of entry 
 } d_entry;

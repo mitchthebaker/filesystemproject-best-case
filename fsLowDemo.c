@@ -82,12 +82,19 @@ int main (int argc, char *argv[])
 		// Initialize the parameters for our VCB structure and load into LBA
 		int params_set = initVCB(aVCB_ptr, volumeSize, blockSize);
 		int is_written = loadVCB(aVCB_ptr);
+
+		//initialize directory here?
+		//something like new directory = initDirectory(parent) --> should be null for root
+		int params_set_dir = initRootDir(aVCB_ptr);
+		
+		
 	}
 
 	// Test to see if VCB is initialized with default params
 	printf("\nnumBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
     printf("sizeOfBlocks: %ld\n", aVCB_ptr->sizeOfBlock);
     printf("magic num: %ld\n", aVCB_ptr->magicNumber);
+	//test to see if root directory is initialized here ....?
 	
 	free (aVCB_ptr);
 	free (buf);

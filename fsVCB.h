@@ -41,5 +41,5 @@ int loadVCB(VCB * aVCB_ptr);
 int initRootDir(VCB * aVCB_ptr);
 
 //write directory blocks to the VCB
-int writeDir(VCB * aVCB_ptr);
+//int writeDir(VCB * aVCB_ptr);
 
