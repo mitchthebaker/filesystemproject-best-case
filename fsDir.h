@@ -7,9 +7,8 @@
 * File: fsDir.h
 *
 * Description: This is the header file for fsVCB.c; the functions 
-*              declared below are necessary for loading and 
-*              initializing our directory system and roote directory in the 
-*              first block of the LBA.
+*              declared below are necessary for
+*              initializing our directory system and the root directory
 *
 **************************************************************/
 #include "fsLow.h"

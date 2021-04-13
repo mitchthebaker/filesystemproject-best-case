@@ -1,6 +1,6 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: Mitchel Baker 
+* Name: Mitchel Baker and Tania Nemeth
 * Student ID: 917679066
 * Project: Basic File System
 *
@@ -36,6 +36,7 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize);
 // Return a value of 0 upon success, -1 otherwise.
 int loadVCB(VCB * aVCB_ptr);
 
+//Tania
 //initialize all of the parameters in the directory structure 
 int initRootDir(VCB * aVCB_ptr);
 

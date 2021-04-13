@@ -1,6 +1,6 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: Mitchel Baker 
+* Name: Mitchel Baker and Tania Nemeth
 * Student ID: 917679066
 * Project: Basic File System
 *
@@ -40,6 +40,7 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
     return (!(aVCB_ptr->numberOfBlocks >= 0) || !(aVCB_ptr->sizeOfBlock >= 0) 
          || !(aVCB_ptr->magicNumber >= 0)) ? -1 : 0;
 }
+//Tania 
 int initRootDir(VCB * aVCB_ptr){
     //assumming VCB initialize for now 
     //need to get the # of directory entries and size of DE to figure out # of bytes to allocate
@@ -47,7 +48,7 @@ int initRootDir(VCB * aVCB_ptr){
     //aVCB_ptr->numberOfBlocks = 
     //populate with initizalied, default, empty directory entries (malloc and init array of DE's to default empty entries)
     Directory root;     //allocate space for root directory 
-    
+
 
 }
 //LBA write of the blocks to volume 
@@ -57,6 +58,7 @@ int writeDir(VCB * aVCB_ptr){
     //set VBA -> LBARootDir (using #2 ?)
 
 }
+//end Tania
 
 // Load our VCB into the LBA at logical block 0
 int loadVCB(VCB * aVCB_ptr) {
