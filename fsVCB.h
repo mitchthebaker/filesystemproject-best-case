@@ -36,3 +36,9 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize);
 // Return a value of 0 upon success, -1 otherwise.
 int loadVCB(VCB * aVCB_ptr);
 
+//initialize all of the parameters in the directory structure 
+int initRootDir(VCB * aVCB_ptr);
+
+//write directory blocks to the VCB
+int writeDir(VCB * aVCB_ptr);
+
