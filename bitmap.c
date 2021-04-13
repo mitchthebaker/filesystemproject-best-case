@@ -4,11 +4,6 @@
 #define CHAR_OFFSET(b) ((b/CHAR_BIT))
 #define BIT_OFFSET(b) ((b%CHAR_BIT))
 
-void bitmap_init(struct bitmap_t* bitmap);
-int bitmap_set(struct bitmap_t* bitmap, int value, int index);
-int bitmap_get(struct bitmap_t* bitmap, int index);
-
-
 int map_getBit(unsigned char* c, int pos){
     return ((*c >> pos) & 1);
 }
