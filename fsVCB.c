@@ -63,14 +63,11 @@ int initRootDir(VCB * aVCB_ptr){
     LBAwrite(root.entries, num_blocks, 1);
     // root.entries[0].d_name = ".";
     // root.entries[1].d_name = "..";
-
-
-
+    aVCB_ptr->LBA_indexOf_rootDir = 1;
+    aVCB_ptr->LBA_indexOf_freeSpace = 1 + num_blocks;
 
     //https://www.thegeekstuff.com/2012/06/c-directory/
     // fs_mkdir("/", 0777);
-    // aVCB_ptr->LBA_indexOf_rootDir = index of root directory 
-    // aVCB_ptr->LBA_indexOf_freeSpace = index of free space 
     
 
 
