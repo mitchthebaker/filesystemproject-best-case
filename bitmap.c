@@ -1,28 +1,39 @@
-#include <limits.h>
 #include <stdint.h>
 #include "bitmap.h"
-typedef uint32_t space_t;
-enum { BITS_PER_SPACE = sizeof(space_t) * CHAR_BIT };
-#define SPACE_OFFSET(b) ((b) / BITS_PER_SPACE)
-#define BIT_OFFSET(b) ((b) % BITS_PER_SPACE)
 
-//give up today, will rewrite tomorrow
-void bitmap_init(struct bitmap_t* bitmap);
-int bitmap_set(struct bitmap_t* bitmap, int value, int index);
-int bitmap_get(struct bitmap_t* bitmap, int index);
+#define CHAR_OFFSET(b) ((b/CHAR_BIT))
+#define BIT_OFFSET(b) ((b%CHAR_BIT))
 
-
-
-void set_bit(space_t *words, int n) { 
-    words[SPACE_OFFSET(n)] |= ((space_t) 1 << BIT_OFFSET(n));
+int map_getBit(unsigned char* c, int pos){
+    return ((*c >> pos) & 1);
 }
 
-void clear_bit(space_t *words, int n) {
-    words[SPACE_OFFSET(n)] &= ~((space_t) 1 << BIT_OFFSET(n)); 
+void map_setBit(unsigned char* c, int bit, int pos){
+    *c ^= (-bit ^ *c) & (1 << pos);
 }
 
-int get_bit(space_t *words, int n) {
-    space_t bit = words[SPACE_OFFSET(n)] & ((space_t) 1 << BIT_OFFSET(n));
-    return bit != 0; 
+int map_set(struct bitmap_t* bitmap, int val, int i){
+
+    if (i > MAX_BITS)
+        return -1;
+
+    map_setBit(&bitmap->array[CHAR_OFFSET(i)], val, BIT_OFFSET(i));
+
+    return 0;
 }
 
+int map_get(struct bitmap_t* bitmap, int i){
+    if (i > MAX_BITS)
+        return -1;
+
+    return map_getBit(&bitmap->array[CHAR_OFFSET(i)],BIT_OFFSET(i));
+}
+
+void map_init(struct bitmap_t* bitmap){
+    int i;
+    for (i = 0; i<MAX_BITS; i++){
+        map_set(bitmap,0,i);
+    }
+}
+
+//Do we need a clear function?

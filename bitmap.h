@@ -1,19 +1,20 @@
 #ifndef BITMAP_H
 #define BITMAP_H
 
-#define bitSize (CHAR_BIT*sizeof(byte))
+#include <limits.h>
+//not sure about the size, so let's change it at meeting
+#define MAX_CHARS 128
+#define MAX_BITS MAX_CHARS*CHAR_BIT
 
-int get_bit   (space_t *, int);
-void set_bit   (space_t *, int);
-void clear_bit (space_t *, int);
+struct bitmap_t {
+    unsigned char array[MAX_CHARS];
+};
 
-typedef struct {
-    int num_bits;
-    char* entries;
-}bitmap_t;
+int map_getBit(unsigned char* c, int pos);
+void map_setBit(unsigned char* c, int bit, int pos);
 
-void bitmap_init(struct bitmap_t* bitmap);
-int bitmap_set(struct bitmap_t* bitmap, int value, int index);
-int bitmap_get(struct bitmap_t* bitmap, int index);
+int map_set(struct bitmap_t* bitmap, int val, int index);
+int map_get(struct bitmap_t* bitmap, int index);
+void map_init(struct bitmap_t* bitmap);
 
 #endif
