@@ -19,6 +19,7 @@
 #include "fsDir.h"
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 // Initialize our VCB with its default parameters.
 //
@@ -43,28 +44,57 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
          || !(aVCB_ptr->magicNumber >= 0)) ? -1 : 0;
 }
 //Tania 
-int initRootDir(VCB * aVCB_ptr){
-    //assumming VCB initialize for now 
-    //need to get the # of directory entries and size of DE to figure out # of bytes to allocate
-    //multiply and add (block size - 1) then / by block size to get the # of blocks 
-    //populate with initizalied, default, empty directory entries (malloc and init array of DE's to default empty entries)
-    
-    Directory root;     //allocate space for root directory 
+d_entry * createAndInitDir (ino_t parent, VCB * aVCB_ptr){
+    //function that will create and initizalize empty directory entries in memory 
+    d_entry * dir;     //allocate space for the directory 
+     //need to get the # of directory entries and size of DE to figure out # of bytes to allocate
     int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
+     //multiply and add (block size - 1) then / by block size to get the # of blocks 
     int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
-    root.entries = malloc(num_blocks * aVCB_ptr->sizeOfBlock);
-    //root.entries = malloc(MAX_NUM_ENTRIES * sizeof(d_entry));
-    //write root directory to block 1 
-    LBAwrite(root.entries, num_blocks, 1);
-    //create directory entries for . & ..
-    strcpy(root.entries[0].d_name, ".");
-    strcpy(root.entries[1].d_name, "..");
+    //populate with initizalied, default, empty directory entries (malloc and init array of DE's to default empty entries)
+    dir = malloc(num_blocks * aVCB_ptr->sizeOfBlock);
+    //need to indicate that the entries are free and set the parent
+    for(int i = 0; i < MAX_NUM_ENTRIES; i++){
+        dir[i].parent = parent;
+        dir[i].d_free = true;
+    }
+
+}
+int initRootDir(VCB * aVCB_ptr){
+    d_entry * root = createAndInitDir(0, aVCB_ptr);
+    //point lba to where the freespace begins 
+    int LBA = aVCB_ptr->LBA_indexOf_freeSpace;
+    int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
+     //multiply and add (block size - 1) then / by block size to get the # of blocks 
+    int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
+    //write root directory to LBA
+    LBAwrite(root, num_blocks , LBA);
+    
+
+    //location is LBA
+    //size is # of dir entries * size of directory entry
+
+    //create directory entry for .
+    strcpy(root[0].d_name, ".");
+    root[0].d_free = false;
+    //type of file is directory
+    root[0].d_type = 'd';
+    
+
+    //for .. if parent == null it's the LBA, otherwise: its the parent
+    //if parent == null ? LBA : parent
+    //size = parent (sizeof(parent)), type of file is directory
+    //create directory entry for ..
+    strcpy(root[1].d_name, "..");
+    root[1].d_free = false;
+    //type of file is directory
+    root[1].d_type = 'd';
+    
+
     //write directory entries to the file system
-    LBAwrite(root.entries, num_blocks, 1);
-    // root.entries[0].d_name = ".";
-    // root.entries[1].d_name = "..";
-    aVCB_ptr->LBA_indexOf_rootDir = 1;
-    aVCB_ptr->LBA_indexOf_freeSpace = 1 + num_blocks;
+    LBAwrite(root, num_blocks, LBA);
+    aVCB_ptr->LBA_indexOf_rootDir = LBA;
+    aVCB_ptr->LBA_indexOf_freeSpace = LBA + num_blocks;
 
     //https://www.thegeekstuff.com/2012/06/c-directory/
     // fs_mkdir("/", 0777);

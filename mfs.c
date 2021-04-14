@@ -1,6 +1,6 @@
 /**************************************************************
 * Class:  CSC-415
-* Name: tania nemeth
+* Name: tania nemeth & team
 * Student ID: 920680290
 * Project: Basic File System
 *

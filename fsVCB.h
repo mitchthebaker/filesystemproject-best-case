@@ -40,6 +40,7 @@ int loadVCB(VCB * aVCB_ptr);
 //initialize all of the parameters in the directory structure 
 int initRootDir(VCB * aVCB_ptr);
 
-//write directory blocks to the VCB
-//int writeDir(VCB * aVCB_ptr);
+//function that will create and initizalize empty directory entries in memory 
+d_entry * createAndInitDir(ino_t parent,  VCB * aVCB_ptr);
+//end Tania 
 
