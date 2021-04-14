@@ -12,6 +12,7 @@
 *
 **************************************************************/
 #include "fsLow.h"
+#include <stdint.h>
 #include <sys/stat.h>
 #include <stdbool.h>
 #define MAX_NUM_ENTRIES 10

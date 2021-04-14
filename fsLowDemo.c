@@ -26,6 +26,7 @@
 #include "fsLow.h"
 #include "mfs.h"
 #include "fsVCB.h"
+#include "bitmap.h"
 
 int main (int argc, char *argv[])
 	{	
@@ -68,6 +69,19 @@ int main (int argc, char *argv[])
 	// Initialize our VCB struct, allocate enough memory to account for all its parameters
 	VCB * aVCB_ptr = malloc(sizeof(* aVCB_ptr));
 
+	struct bitmap* freeSpace = create_bitmap(volumeSize, blockSize);
+
+	// We will be using bitarray with len = volumeSize/blockSize and
+	// to store bitmap with such size on the volume we will need
+	// byteCount=len/8 bytes and these bytes translate to byteCount/blockSize
+	// blocks on the disk.
+	int numberOfFSBlocks = ceil(ceil(ceil(volumeSize/blockSize) / 8) / blockSize);
+	printf("GOOD UNTIL HERE\n");
+	LBAwrite(freeSpace, numberOfFSBlocks, 1);
+	printf("fAILED HERE");
+	// make a replica of freeSpace
+	// 
+
 	// Error testing to determine whether VCB has been formatted or not 
 	//
 	// If myVCB_Ptr's 'magicNumber' is initialized, then our VCB has been formatted 
@@ -97,6 +111,8 @@ int main (int argc, char *argv[])
 	//test to see if root directory is initialized here ....?
 	
 	free (aVCB_ptr);
+	// free (freeSpace->isBlockFree[0]);
+	free (freeSpace);
 	free (buf);
 	free (buf2);
 	closePartitionSystem();
