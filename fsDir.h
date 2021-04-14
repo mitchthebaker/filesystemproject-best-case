@@ -12,6 +12,7 @@
 *
 **************************************************************/
 #include "fsLow.h"
+#include <stdint.h>
 #include <sys/stat.h>
 #define MAX_NUM_ENTRIES 10
 #define MAX_NAME_LEN 30
