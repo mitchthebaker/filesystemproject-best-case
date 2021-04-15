@@ -12,7 +12,8 @@
 *              first block of the LBA.
 *
 **************************************************************/
-
+#ifndef _FSVCB_H
+#define _FSVCB_H
 #include "fsLow.h"
 #include "fsDir.h"
 
@@ -46,3 +47,4 @@ int initRootDir(VCB * aVCB_ptr);
 d_entry * createAndInitDir(ino_t parent,  VCB * aVCB_ptr);
 //end Tania 
 
+#endif
