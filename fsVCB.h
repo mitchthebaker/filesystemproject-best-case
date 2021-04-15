@@ -19,6 +19,7 @@
 
 typedef struct VCB {
     uint64_t numberOfBlocks;   // We need to know the total number of blocks (Volume size / block size) 
+    uint64_t numberOfBlocksRemaining;
     uint64_t sizeOfBlock;      // We need to know the size of each block (512)
     int LBA_indexOf_rootDir;   // Important so we know where the root dir starts in the LBA 
     int LBA_indexOf_freeSpace; // We must know where the freespace begins in the LBA 
