@@ -14,6 +14,7 @@
 **************************************************************/
 
 #include "fsLow.h"
+#include "fsDir.h"
 
 #define MAGIC_NUMBER 0x20214150
 
