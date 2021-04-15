@@ -4,7 +4,7 @@
 * Student ID: N/A
 * Project: Basic File System
 *
-* File: fsLow.h
+* File: mfs.h
 *
 * Description: 
 *	This is the file system interface.
@@ -49,7 +49,7 @@ typedef struct
 	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
 	} fdDir;
 
-
+int fs_init();
 int fs_mkdir(const char *pathname, mode_t mode);
 int fs_rmdir(const char *pathname);
 fdDir * fs_opendir(const char *name);
@@ -61,6 +61,7 @@ int fs_setcwd(char *buf);   //linux chdir
 int fs_isFile(char * path);	//return 1 if file, 0 otherwise
 int fs_isDir(char * path);		//return 1 if directory, 0 otherwise
 int fs_delete(char* filename);	//removes a file
+int fs_close();
 
 
 
