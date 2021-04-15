@@ -11,6 +11,8 @@
 *              initializing our directory system and the root directory
 *
 **************************************************************/
+#ifndef _FSDIR_H
+#define _FSDIR_H
 #include "fsLow.h"
 #include <stdint.h>
 #include <sys/stat.h>
@@ -39,3 +41,4 @@ typedef struct Directory {
 
 
 
+#endif
