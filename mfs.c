@@ -34,9 +34,6 @@ int fs_init(){
     //Initialize our VCB struct, allocate enough memory to account for all its parameters
 	VCB * aVCB_ptr = malloc(sizeof(* aVCB_ptr));
 
-    //int vcb_success = initVCB(aVCB_ptr, &volumeSize, &blockSize);
-    //fs_init_success = (vcb_success == 0) ? 0 : fs_init_success; 
-
     // Error testing to determine whether VCB has been formatted or not 
 	//
 	// If myVCB_Ptr's 'magicNumber' is initialized, then our VCB has been formatted 
@@ -49,12 +46,12 @@ int fs_init(){
 	else {
 		
 		// Initialize the parameters for our VCB structure and load into LBA
-		int params_set = initVCB(aVCB_ptr, volumeSize, blockSize);
-		//int is_written = loadVCB(aVCB_ptr);
+        fs_init_success = (initVCB(aVCB_ptr, volumeSize, blockSize) == 0) ? 0 : fs_init_success; 
+		fs_init_success = (loadVCB(aVCB_ptr) == 0) ? 0 : fs_init_success;
 
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
-		//int params_set_dir = initRootDir(aVCB_ptr);
+		int params_set_dir = initRootDir(aVCB_ptr);
 		
 		
 	}
