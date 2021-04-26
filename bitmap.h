@@ -1,15 +1,15 @@
 #ifndef BITMAP_H
 #define BITMAP_H
 #include <limits.h>
-//not sure about the size, so let's change it at meeting
+
 #define MAX_CHARS 128
 #define MAX_BITS MAX_CHARS*CHAR_BIT
 
 struct bitmap_t {
-  uint64_t volumeSize;
-  uint64_t blockSize;
-  uint64_t numberOfBlocks;
-  unsigned char *isBlockFree;
+    uint64_t volumeSize;
+    uint64_t blockSize;
+    uint64_t numberOfBlocks;
+    unsigned char *isBlockFree;
 };
 
 struct bitmap_t* create_bitmap(int, int);

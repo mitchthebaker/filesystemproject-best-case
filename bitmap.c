@@ -7,14 +7,14 @@
 #define BIT_OFFSET(b) ((b%CHAR_BIT))
 
 struct bitmap_t* create_bitmap(int volumeSize, int blockSize){
-  struct bitmap_t* p = malloc(sizeof(struct bitmap_t));
+    struct bitmap_t* p = malloc(sizeof(struct bitmap_t));
 
-  p->volumeSize = volumeSize;
-  p->blockSize = blockSize;
-  p->numberOfBlocks = ceil(volumeSize / blockSize);
+    p->volumeSize = volumeSize;
+    p->blockSize = blockSize;
+    p->numberOfBlocks = ceil(volumeSize / blockSize);
 
-  p->isBlockFree = malloc(p->numberOfBlocks * sizeof(unsigned char));
-  return p;
+    p->isBlockFree = malloc(p->numberOfBlocks * sizeof(unsigned char));
+    return p;
 }
 
 int map_getBit(unsigned char* c, int pos){
@@ -48,5 +48,3 @@ void map_init(struct bitmap_t* bitmap){
         map_set(bitmap,0,i);
     }
 }
-
-//Do we need a clear function?
