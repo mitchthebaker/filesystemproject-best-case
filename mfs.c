@@ -14,9 +14,12 @@
 **************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include "mfs.h"
 #include "fsLow.h"
 #include "fsVCB.h"
+#include "bitmap.h"
+
 //setup 
 int fs_init(){
     // 'startPartitionSystem()' takes parameters:
@@ -49,17 +52,25 @@ int fs_init(){
         fs_init_success = (initVCB(aVCB_ptr, volumeSize, blockSize) == 0) ? 0 : fs_init_success; 
 		fs_init_success = (loadVCB(aVCB_ptr) == 0) ? 0 : fs_init_success;
 
+        // Create bitmap and then initialize it
+        struct bitmap_t * aBitmap = create_bitmap(volumeSize, blockSize);
+
+        // Calculate total number of blocks bits in terms of bytes
+        uint64_t totalNumBytes = ceil((double) aBitmap->numberOfBlocks / 8);
+        //printf("total number of bytes: %ld\n", totalNumBytes);
+
+        // Get the size of the bitmap, in terms of blocks, by dividing total bytes by the block size
+        uint64_t sizeOfBitmap = ceil((double) totalNumBytes / blockSize);
+        //printf("size of bitmap: %ld\n", sizeOfBitmap);
+
+        // Allocate memory for bitmap, then write to LBA
+        map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
+
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
-		int params_set_dir = initRootDir(aVCB_ptr);
-		
-		
+		int params_set_dir = initRootDir(aVCB_ptr, sizeOfBitmap);
 	}
     
-    //load into file system
-    //loadVCB(aVCB_ptr);
-    //write root directory into the file system
-    //initRootDir(aVCB_ptr);
     free (aVCB_ptr);
 
     return fs_init_success;

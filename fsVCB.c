@@ -26,9 +26,17 @@
 // Expand upon the VCB and add any new parameters in 'fsVCB.h' if necessary 
 int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
 
+    char title[] = "VCB Header - Best Case";
+    strcpy(aVCB_ptr->vcbTitle, title);
     aVCB_ptr->numberOfBlocks = volumeSize / blockSize;
     aVCB_ptr->sizeOfBlock = blockSize;
     aVCB_ptr->magicNumber = MAGIC_NUMBER;
+
+    // Test to see if VCB is initialized with default params
+    printf("\ntitle: %s\n", aVCB_ptr->vcbTitle);
+	printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
+    printf("sizeOfBlocks: %ld\n", aVCB_ptr->sizeOfBlock);
+    printf("magic num: %d\n", aVCB_ptr->magicNumber);
 
     // TODO's
     //
@@ -60,10 +68,11 @@ d_entry * createAndInitDir (ino_t parent, VCB * aVCB_ptr){
     }
 
 }
-int initRootDir(VCB * aVCB_ptr){
+int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
     d_entry * root = createAndInitDir(0, aVCB_ptr);
-    //point lba to where the freespace begins 
-    int LBA = aVCB_ptr->LBA_indexOf_freeSpace;
+    //point lba to where the freespace ends, (index of freespace = 1 + sizeOfBitmap)
+    int LBA = aVCB_ptr->LBA_indexOf_freeSpace + sizeOfBitmap;
+    printf("LBA: %d\n", LBA);
     int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
      //multiply and add (block size - 1) then / by block size to get the # of blocks 
     int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
@@ -110,16 +119,16 @@ int loadVCB(VCB * aVCB_ptr) {
 
     // Allocate 512 bytes and read block 0 from LBA
     char * aBuffer = malloc(MINBLOCKSIZE);
-    uint64_t retRead = LBAread(aBuffer, 1, 0);
-    printf("\nBlock 0 of volume: %s\n", aBuffer);
 
     // Write our VCB struct to logical block 0
     uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
+    printf("\nWriting to LBA...\n");
+    printf("blocksWritten: %ld\n", blocksWritten);
 
     // Lets check if our VCB was written to the LBA
     LBAread(aBuffer, 1, 0);
 
-    printf("Block 0 of volume: %s\n", aBuffer);
+    printf("Block 0 of volume: %s\n\n", aBuffer);
 
     // Cleanup
     free(aBuffer);

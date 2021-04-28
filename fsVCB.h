@@ -17,9 +17,11 @@
 #include "fsLow.h"
 #include "fsDir.h"
 
+#define VCB_TITLE_LENGTH 64
 #define MAGIC_NUMBER 0x20214150
 
 typedef struct VCB {
+    char vcbTitle[VCB_TITLE_LENGTH];
     uint64_t numberOfBlocks;   // We need to know the total number of blocks (Volume size / block size) 
     uint64_t numberOfBlocksRemaining;
     uint64_t sizeOfBlock;      // We need to know the size of each block (512)
@@ -41,7 +43,7 @@ int loadVCB(VCB * aVCB_ptr);
 
 //Tania
 //initialize all of the parameters in the directory structure 
-int initRootDir(VCB * aVCB_ptr);
+int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap);
 
 //function that will create and initizalize empty directory entries in memory 
 d_entry * createAndInitDir(ino_t parent,  VCB * aVCB_ptr);
