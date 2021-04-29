@@ -68,7 +68,7 @@ int initRootDir(VCB * aVCB_ptr){
      //multiply and add (block size - 1) then / by block size to get the # of blocks 
     int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
     //write root directory to LBA
-    LBAwrite(root, num_blocks , LBA);
+    LBAwrite(root, num_blocks, LBA);
     
 
     //location is LBA
