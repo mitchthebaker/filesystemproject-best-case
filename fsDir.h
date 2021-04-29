@@ -17,12 +17,13 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include <stdbool.h>
-#define MAX_NUM_ENTRIES 10
+#define MAX_NUM_ENTRIES 100
 #define MAX_NAME_LEN 30
 
 //directory should contain array of entries 
-typedef struct d_entry {
-    ino_t d_ino;                // file serial #
+typedef struct d_entry {                           
+    //need field that is location where file is stored
+    ino_t d_ino;                // file serial # --> offset field? 
     ino_t parent;               
     char d_name[MAX_NAME_LEN];  // name of entry 
     char d_type;               // type of entry (d = directory, f = file)
@@ -34,7 +35,8 @@ typedef struct d_entry {
 typedef struct Directory {
     char name;
     int size;
-    d_entry *entries;      //should initialize this way (dynamically allocate) d_entry * entries
+    d_entry entries[MAX_NUM_ENTRIES];
+    //d_entry *entries;      //should initialize this way (dynamically allocate) d_entry * entries
 
 } Directory;
 
