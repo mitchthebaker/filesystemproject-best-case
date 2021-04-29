@@ -66,8 +66,11 @@ d_entry * createAndInitDir (ino_t parent, VCB * aVCB_ptr){
         dir[i].parent = parent;
         dir[i].d_free = true;
     }
-    return dir;
 
+    d_entry * root = dir;
+    free(dir);
+
+    return root;
 }
 int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
     d_entry * root = createAndInitDir(0, aVCB_ptr);
@@ -116,24 +119,25 @@ int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
 // Load our VCB into the LBA at logical block 0
 int loadVCB(VCB * aVCB_ptr) {
 
-    // Allocate 512 bytes and read block 0 from LBA
-    char * aBuffer = malloc(MINBLOCKSIZE);
-
     // Write our VCB struct to logical block 0
-    // uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
-    // printf("\nWriting to LBA...\n");
-    // printf("blocksWritten: %ld\n", blocksWritten);
-
-    // Lets check if our VCB was written to the LBA
-    LBAread(aBuffer, 1, 0);
-
-    printf("Block 0 of volume: %s\n\n", aBuffer);
-
-    // Cleanup
-    free(aBuffer);
+    uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
+    printf("\nWriting to LBA...\n");
+    printf("blocksWritten: %ld\n", blocksWritten);
 
     // 'blocksWritten' will be 1 if the write was successful, therefore return 0 (OK)
     // -1 will be returned if the write to disk failed
-    return 0; // @TODO FIX THIS LATER 
-    // return (blocksWritten != 1) ? -1 : 0;
+    return (blocksWritten != 1) ? -1 : 0;
+}
+
+// Get the VCB from LBA
+VCB * getVCB(VCB * aVCB_ptr) {
+
+    // Lets check if our VCB was written to the LBA
+    LBAread(aVCB_ptr, 1, 0);
+
+    // Output first block of VCB to make sure it exists
+    printf("Block 0 of volume: %s\n\n", aVCB_ptr);
+
+    // Return the VCB from LBA
+    return aVCB_ptr;
 }

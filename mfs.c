@@ -97,7 +97,7 @@ int fs_close(){
 
 char * fs_getcwd(char *buf, size_t size) {
     struct VCB *myVCB = malloc(512);
-    loadVCB(myVCB);
+    myVCB = getVCB(myVCB);
     Directory *curr = malloc(getBytes(sizeof(*curr)));
     LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
 
