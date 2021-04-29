@@ -35,6 +35,8 @@ typedef u_int32_t uint32_t;
 
 struct fs_diriteminfo
 	{
+	off_t directory_offset;
+	ino_t d_inode;				/* item inode number				 */
     unsigned short d_reclen;    /* length of this record */
     unsigned char fileType;    
     char d_name[256]; 			/* filename max filename is 255 characters */
@@ -55,6 +57,10 @@ int fs_rmdir(const char *pathname);
 fdDir * fs_opendir(const char *name);
 struct fs_diriteminfo *fs_readdir(fdDir *dirp);
 int fs_closedir(fdDir *dirp);
+//pwd
+//cd 
+//ls 
+//md 
 
 char * fs_getcwd(char *buf, size_t size);
 int fs_setcwd(char *buf);   //linux chdir

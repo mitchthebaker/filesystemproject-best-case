@@ -77,8 +77,8 @@ int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
      //multiply and add (block size - 1) then / by block size to get the # of blocks 
     int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
     //write root directory to LBA
-    //LBAwrite(root, num_blocks, LBA);
-    LBAwrite(root, num_blocks, 1);
+    LBAwrite(root, num_blocks, LBA);
+    //LBAwrite(root, num_blocks, 1);
     
 
     //location is LBA

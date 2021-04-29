@@ -19,6 +19,11 @@
 #include "fsLow.h"
 #include "fsVCB.h"
 #include "bitmap.h"
+ino_t curDir = 0;
+ino_t rootDir = 0;
+uint64_t volumeSize;
+uint64_t blockSize;
+//maybe initizlize fs_diriteminfo as null ?
 
 //setup 
 int fs_init(){
@@ -46,6 +51,7 @@ int fs_init(){
 	}
 
 	// Otherwise, VCB is not initialized. Run initVCB() and loadVCB()
+    //run init root directory 
 	else {
 		
 		// Initialize the parameters for our VCB structure and load into LBA
