@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "mfs.h"
 #include "fsLow.h"
 #include "fsVCB.h"
@@ -25,6 +26,13 @@ uint64_t volumeSize;
 uint64_t blockSize;
 //maybe initizlize fs_diriteminfo as null ?
 
+u_int64_t blocksizeCache;
+
+
+u_int64_t getBytes(u_int64_t bytes) {
+    return ((bytes / blocksizeCache) + 1) * blocksizeCache;
+}
+
 //setup 
 int fs_init(){
     // 'startPartitionSystem()' takes parameters:
@@ -34,6 +42,7 @@ int fs_init(){
     //  uint64_t * blockSize
     uint64_t volumeSize = 10000000;
     uint64_t blockSize = 512;
+    blocksizeCache = blockSize;
     int fs_init_success = -1;
 
     //file writing into, block size, etc.,
@@ -78,11 +87,49 @@ int fs_init(){
 	}
     
     free (aVCB_ptr);
-
     return fs_init_success;
 }
 
 
 int fs_close(){
     closePartitionSystem();
+}
+
+char * fs_getcwd(char *buf, size_t size) {
+    struct VCB *myVCB = malloc(512);
+    loadVCB(myVCB);
+    Directory *curr = malloc(getBytes(sizeof(*curr)));
+    LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
+
+    char **directoryNames = malloc(sizeof(char *) * 10);
+    int count = 0;
+    printf("ENTERING WHILE NOW\n");
+    while (strcmp(".", curr->name) != 0) {
+        directoryNames[count] = malloc(sizeof(char) * 256);
+        strcpy(directoryNames[count], curr->name);
+        strcat(directoryNames[count], "/");
+        count++;
+        printf("LOOPING IN WHILE\n");
+        if (rootDir == curr) {
+            printf("WE ARE AT ROOT DIR SIR\n");
+        } else {
+            printf("NOT A ROOT DIR\n");
+        }
+        LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curr->parent);
+    }
+    
+    directoryNames[count] = malloc(sizeof(char) * 256);
+    strcpy(directoryNames[count], curr->name);
+    char *fullPath = malloc(sizeof(*fullPath) * 512);
+
+    fullPath[0] = '\0';
+
+    for (int i = count; i >= 0; i--) {
+        strcat(fullPath, directoryNames[i]);
+        free(directoryNames[i]);
+    }
+    free(directoryNames);
+    free(myVCB);
+    free(curr);
+    return fullPath;
 }

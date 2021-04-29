@@ -114,7 +114,7 @@
 #define CMDCP2L_ON	0
 #define CMDCP2FS_ON	0
 #define CMDCD_ON	0
-#define CMDPWD_ON	0
+#define CMDPWD_ON	1
 
 
 typedef struct dispatch_t
@@ -690,7 +690,7 @@ void processcommand (char * cmd)
 
 int main (int argc, char * argv[])
 	{
-
+		
 	// Init the file system, first and moremost
 	int ret = fs_init();
 	printf("return Value: %d\n", ret);
@@ -701,14 +701,16 @@ int main (int argc, char * argv[])
 		
 	using_history();
 	stifle_history(200);	//max history entries
-	
+	printf("DEBUG#35\n");
 	while (1)
 		{
+			printf("DEBUG#36\n");
 		cmdin = readline("Prompt > ");
+		printf("DEBUG#37\n");
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif
-		
+		printf("DEBUG#38\n");
 		cmd = malloc (strlen(cmdin) + 30);
 		strcpy (cmd, cmdin);
 		free (cmdin);
