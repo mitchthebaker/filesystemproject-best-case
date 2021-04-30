@@ -51,6 +51,9 @@ int fs_init(){
     //Initialize our VCB struct, allocate enough memory to account for all its parameters
 	VCB * aVCB_ptr = malloc(sizeof(* aVCB_ptr));
 
+    // Initialize a Directory structure to represent the root directory
+    Directory * root = malloc(sizeof(* root)); 
+
     // Error testing to determine whether VCB has been formatted or not 
 	//
 	// If myVCB_Ptr's 'magicNumber' is initialized, then our VCB has been formatted 
@@ -83,10 +86,15 @@ int fs_init(){
 
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
-		int params_set_dir = initRootDir(aVCB_ptr, sizeOfBitmap);
+		int params_set_dir = initRootDir(aVCB_ptr, root, sizeOfBitmap);
 	}
     
     free (aVCB_ptr);
+    free (root);
+
+    aVCB_ptr = NULL;
+    root = NULL;
+
     return fs_init_success;
 }
 
@@ -96,12 +104,27 @@ int fs_close(){
 }
 
 char * fs_getcwd(char *buf, size_t size) {
+
     struct VCB *myVCB = malloc(512);
     myVCB = getVCB(myVCB);
-    Directory *curr = malloc(getBytes(sizeof(*curr)));
-    LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
 
-    char **directoryNames = malloc(sizeof(char *) * 10);
+    Directory *curr = malloc(getBytes(sizeof(*curr)));
+
+    printf("currentDir: %ld\n", curDir);
+    printf("index of rootDir: %d\n", myVCB->LBA_indexOf_rootDir);
+
+    // Old LBAread() call
+    //LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
+
+    // New LBAread() updated with index of our root dir
+    // Also printed out the current directory name and its parent
+    LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
+    printf("current dir name: %s\n", curr->name);
+    printf("current dir parent: %ld\n", curr->parent);
+
+    return 0;
+
+    /*char **directoryNames = malloc(sizeof(char *) * 10);
     int count = 0;
     printf("ENTERING WHILE NOW\n");
     while (strcmp(".", curr->name) != 0) {
@@ -131,5 +154,5 @@ char * fs_getcwd(char *buf, size_t size) {
     free(directoryNames);
     free(myVCB);
     free(curr);
-    return fullPath;
+    return fullPath;*/
 }
