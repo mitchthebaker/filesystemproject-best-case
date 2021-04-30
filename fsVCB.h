@@ -16,6 +16,7 @@
 #define _FSVCB_H
 #include "fsLow.h"
 #include "fsDir.h"
+#include <sys/types.h>
 
 #define VCB_TITLE_LENGTH 64
 #define MAGIC_NUMBER 0x20214150
@@ -25,6 +26,7 @@ typedef struct VCB {
     uint64_t numberOfBlocks;   // We need to know the total number of blocks (Volume size / block size) 
     uint64_t numberOfBlocksRemaining;
     uint64_t sizeOfBlock;      // We need to know the size of each block (512)
+    uint64_t freeSpaceBlocks;  // Keep track of the number of freespace blocks 
     int LBA_indexOf_rootDir;   // Important so we know where the root dir starts in the LBA 
     int LBA_indexOf_freeSpace; // We must know where the freespace begins in the LBA 
     int magicNumber;           // We use this number to determine if our VCB is initialized
@@ -46,10 +48,11 @@ VCB * getVCB(VCB * aVCB_ptr);
 
 //Tania
 //initialize all of the parameters in the directory structure 
-int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap);
+int initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap);
 
 //function that will create and initizalize empty directory entries in memory 
-d_entry * createAndInitDir(ino_t parent,  VCB * aVCB_ptr);
+//d_entry * createAndInitDir(ino_t parent,  VCB * aVCB_ptr);
+Directory * createAndInitDir(ino_t parent, VCB * aVCB_ptr, Directory * rootDir);
 //end Tania 
 
 #endif

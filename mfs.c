@@ -51,6 +51,9 @@ int fs_init(){
     //Initialize our VCB struct, allocate enough memory to account for all its parameters
 	VCB * aVCB_ptr = malloc(sizeof(* aVCB_ptr));
 
+    // Initialize a Directory structure to represent the root directory
+    Directory * root = malloc(sizeof(* root)); 
+
     // Error testing to determine whether VCB has been formatted or not 
 	//
 	// If myVCB_Ptr's 'magicNumber' is initialized, then our VCB has been formatted 
@@ -60,7 +63,7 @@ int fs_init(){
 	}
 
 	// Otherwise, VCB is not initialized. Run initVCB() and loadVCB()
-    //run init root directory 
+    // Run init root directory 
 	else {
 		
 		// Initialize the parameters for our VCB structure and load into LBA
@@ -68,55 +71,63 @@ int fs_init(){
 		fs_init_success = (loadVCB(aVCB_ptr) == 0) ? 0 : fs_init_success;
 
         // Create bitmap and then initialize it
-        struct bitmap_t * aBitmap = create_bitmap(volumeSize, blockSize);
+        //struct bitmap_t * aBitmap = create_bitmap(volumeSize, blockSize);
 
         // Calculate total number of blocks bits in terms of bytes
-        uint64_t totalNumBytes = ceil((double) aBitmap->numberOfBlocks / 8);
+        //uint64_t totalNumBytes = ceil((double) aBitmap->numberOfBlocks / 8);
         //printf("total number of bytes: %ld\n", totalNumBytes);
 
         // Get the size of the bitmap, in terms of blocks, by dividing total bytes by the block size
-        uint64_t sizeOfBitmap = ceil((double) totalNumBytes / blockSize);
+        //uint64_t sizeOfBitmap = ceil((double) totalNumBytes / blockSize);
         //printf("size of bitmap: %ld\n", sizeOfBitmap);
 
         // Allocate memory for bitmap, then write to LBA
-        map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
-
+        //map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
+        int freeSpaceBlocksWritten = map_initialize(aVCB_ptr);
+        
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
-		int params_set_dir = initRootDir(aVCB_ptr, sizeOfBitmap);
+		int params_set_dir = initRootDir(aVCB_ptr, root, freeSpaceBlocksWritten);
+
+        curDir = aVCB_ptr -> LBA_indexOf_freeSpace + freeSpaceBlocksWritten;
 	}
-    
+
     free (aVCB_ptr);
+    free (root);
+
+    aVCB_ptr = NULL;
+    root = NULL;
+
     return fs_init_success;
 }
 
-
-int fs_close(){
-    closePartitionSystem();
-}
-
 char * fs_getcwd(char *buf, size_t size) {
+
     struct VCB *myVCB = malloc(512);
     myVCB = getVCB(myVCB);
+
     Directory *curr = malloc(getBytes(sizeof(*curr)));
-    LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
-    printf("size of Directory: %ld\n", (sizeof(Directory) / myVCB->sizeOfBlock));
-    return 0;
+    // DEBUG prints
+    // printf("currentDir: %ld\n", curDir);
+    // printf("index of rootDir: %d\n", myVCB->LBA_indexOf_rootDir);
+
+    // Old LBAread() call
+    //LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
+
+    // New LBAread() updated with index of our root dir
+    // Also printed out the current directory name and its parent
+    LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
+    // DEBUG prints
+    // printf("current dir name: %s\n", curr->name);
+    // printf("current dir parent: %ld\n", curr->parent);
 
     char **directoryNames = malloc(sizeof(char *) * 10);
     int count = 0;
-    printf("ENTERING WHILE NOW\n");
-    while (strcmp(".", curr->name) != 0) {
+    while (strcmp("/", curr->name) != 0) {
         directoryNames[count] = malloc(sizeof(char) * 256);
         strcpy(directoryNames[count], curr->name);
         strcat(directoryNames[count], "/");
         count++;
-        printf("LOOPING IN WHILE\n");
-        if (rootDir == curr) {
-            printf("WE ARE AT ROOT DIR SIR\n");
-        } else {
-            printf("NOT A ROOT DIR\n");
-        }
         LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curr->parent);
     }
     
@@ -134,4 +145,80 @@ char * fs_getcwd(char *buf, size_t size) {
     free(myVCB);
     free(curr);
     return fullPath;
+}
+
+int fs_setcwd(char *buf) {
+    return 0;
+    // struct VCB *myVCB = malloc(512);
+    // loadVCB(myVCB);
+    // Directory *curr;
+    // if (buf[0] == '/') {
+    //     printf("STARTING FROM ROOT");
+    // } else {
+    //     curr = malloc(getBytes(sizeof(*curr)));
+    //     LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock), curDir);
+    //     struct d_entry *entries = malloc(sizeof(getBytes(*entries)) * curr->size);
+    //     int entryBlockCount = (sizeof(struct d_entry) * curr->size) / myVCB->sizeOfBlock + 1;
+    //     LBAread(entries, entryBlockCount, curr->)
+    // }
+}
+
+
+int fs_close(){
+    closePartitionSystem();
+}
+
+
+int fs_mkdir(const char *pathname, mode_t mode) {
+    struct VCB *myVCB = malloc(512);
+    loadVCB(myVCB);
+    Directory *curr;
+    curr = malloc(getBytes(sizeof(*curr)));
+
+    /* Reading current directory and its entries */
+    if (pathname[0] == '/') {
+        // do we know rootDir is always 1 block?
+        // might have to change this 1 
+        LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
+    } else {
+        curr = malloc(getBytes(sizeof(*curr)));
+        LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
+    }
+
+    /* Allocating blocks for new directory */
+    u_int64_t newDirBlocks = (sizeof(Directory) / myVCB->sizeOfBlock) + 1;
+    u_int64_t newDirPosition = requestFSBlocks(myVCB, newDirBlocks);
+    allocFSBlocks(myVCB, newDirBlocks, newDirPosition);
+
+    /* Initializing new Directory and saving */
+    Directory *newDir = malloc(getBytes(sizeof(*newDir)));
+    newDir->size = 2;
+    newDir->parent = curDir;
+    strcpy(newDir->name, pathname);
+    for(int i = 0; i < MAX_NUM_ENTRIES; i++) {
+        newDir->entries[i].parent = curDir;
+        newDir->entries[i].d_free = true;
+    }
+    strcpy(newDir->entries[0].d_name, ".");
+    newDir->entries[0].d_free = false;
+    newDir->entries[0].d_type = 'd';
+    strcpy(newDir->entries[1].d_name, "..");
+    newDir->entries[1].d_free = false;
+    newDir->entries[1].d_type = 'd';
+
+    LBAwrite(newDir, newDirBlocks, newDirPosition);
+    free(newDir);
+
+    /* Making new entry for the parent */
+    u_int64_t sizeInBlocks = (sizeof(struct Directory) * curr->size);
+    newDir->entries[curr->size].d_ino = newDirPosition;
+    newDir->entries[curr->size].d_free = false;
+    newDir->entries[curr->size].d_type = 'd';
+    strcpy(newDir->entries[curr->size].d_name, pathname);
+    curr->size++;
+
+    u_int64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->sizeOfBlock + 1;
+    LBAwrite(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
+
+    return 1;
 }

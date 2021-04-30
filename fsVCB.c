@@ -52,35 +52,53 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
          || !(aVCB_ptr->magicNumber >= 0)) ? -1 : 0;
 }
 //Tania 
-d_entry * createAndInitDir (ino_t parent, VCB * aVCB_ptr){
+Directory * createAndInitDir (ino_t parent, VCB * aVCB_ptr, Directory * rootDir) {
+
+    // Commented this portion out since in fsDir.h we set d_entry entries[MAX_NUM_ENTRIES] to length
+    // MAX_NUM_ENTRIES. Leaving the dynamic allocation of 'entries' parameter below for reference
+    // if we decide to reincorporate this into our code. 
+    //
     //function that will create and initizalize empty directory entries in memory 
-    d_entry * dir;     //allocate space for the directory 
+    /*d_entry * dir;     //allocate space for the directory 
+
      //need to get the # of directory entries and size of DE to figure out # of bytes to allocate
     int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
+
      //multiply and add (block size - 1) then / by block size to get the # of blocks 
     int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
+
     //populate with initizalied, default, empty directory entries (malloc and init array of DE's to default empty entries)
-    dir = malloc(num_blocks * aVCB_ptr->sizeOfBlock);
+    dir = malloc(num_blocks * aVCB_ptr->sizeOfBlock);*/
+
+    // Initialize root directory's name to '/'?
+    strcpy(rootDir->name, "/");
+
+    // Set root's parent to NULL since it has no parent
+    rootDir->parent = NULL;
+
     //need to indicate that the entries are free and set the parent
-    for(int i = 0; i < MAX_NUM_ENTRIES; i++){
-        dir[i].parent = parent;
-        dir[i].d_free = true;
+    for(int i = 0; i < MAX_NUM_ENTRIES; i++) {
+        rootDir->entries[i].parent = parent;
+        rootDir->entries[i].d_free = true;
     }
     return dir;
 
-    d_entry * root = dir;
-    free(dir);
-
-    return root;
+    return rootDir;
 }
-int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
-    d_entry * root = createAndInitDir(0, aVCB_ptr);
+
+int initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap){
+    
+    Directory * root = createAndInitDir(0, aVCB_ptr, rootDir);
+
     //point lba to where the freespace ends, (index of freespace = 1 + sizeOfBitmap)
     int LBA = aVCB_ptr -> LBA_indexOf_freeSpace + sizeOfBitmap;
-    printf("LBA: %d\n", LBA);
+    printf("LBA position for where rootDir begins: %d\n", LBA);
+
     int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
      //multiply and add (block size - 1) then / by block size to get the # of blocks 
     int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
+    printf("num blocks: %d\n", num_blocks);
+
     //write root directory to LBA
     LBAwrite(root, num_blocks, LBA);
     //LBAwrite(root, num_blocks, 1);
@@ -89,25 +107,29 @@ int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
     //size is # of dir entries * size of directory entry
 
     //create directory entry for .
-    strcpy(root[0].d_name, ".");
-    root[0].d_free = false;
+    strcpy(root->entries[0].d_name, ".");
+    root->entries[0].d_free = false;
     //type of file is directory
-    root[0].d_type = 'd';
+    root->entries[0].d_type = 'd';
 
     //for .. if parent == null it's the LBA, otherwise: its the parent
     //if parent == null ? LBA : parent
     //size = parent (sizeof(parent)), type of file is directory
     //create directory entry for ..
-    strcpy(root[1].d_name, "..");
-    root[1].d_free = false;
+    strcpy(root->entries[1].d_name, "..");
+    root->entries[1].d_free = false;
     //type of file is directory
-    root[1].d_type = 'd';
+    root->entries[1].d_type = 'd';
 
     //write directory entries to the file system
     LBAwrite(root, num_blocks, LBA);
+
+    // After updating index of rootDir to 'LBA', write the changes to LBA
     aVCB_ptr->LBA_indexOf_rootDir = LBA;
-    root->parent = LBA;
-    aVCB_ptr->LBA_indexOf_freeSpace = LBA + num_blocks;
+    LBAwrite(aVCB_ptr, 1, 0);
+
+    //root->parent = LBA;
+    //aVCB_ptr->LBA_indexOf_freeSpace = LBA + num_blocks;
     //https://www.thegeekstuff.com/2012/06/c-directory/
     // fs_mkdir("/", 0777);
     
@@ -120,10 +142,11 @@ int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
 // Load our VCB into the LBA at logical block 0
 int loadVCB(VCB * aVCB_ptr) {
 
+    // Since we are writing the VCB to block 0, decrement 'numberOfBlocks' param by 1
+    aVCB_ptr->numberOfBlocks--;
+
     // Write our VCB struct to logical block 0
     uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
-    printf("\nWriting to LBA...\n");
-    printf("blocksWritten: %ld\n", blocksWritten);
 
     // 'blocksWritten' will be 1 if the write was successful, therefore return 0 (OK)
     // -1 will be returned if the write to disk failed
@@ -135,9 +158,6 @@ VCB * getVCB(VCB * aVCB_ptr) {
 
     // Lets check if our VCB was written to the LBA
     LBAread(aVCB_ptr, 1, 0);
-
-    // Output first block of VCB to make sure it exists
-    printf("Block 0 of volume: %s\n\n", aVCB_ptr);
 
     // Return the VCB from LBA
     return aVCB_ptr;

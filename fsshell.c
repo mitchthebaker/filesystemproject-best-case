@@ -109,11 +109,11 @@
 #define CMDLS_ON	0
 #define CMDCP_ON	0
 #define CMDMV_ON	0
-#define CMDMD_ON	0
+#define CMDMD_ON	1
 #define CMDRM_ON	0
 #define CMDCP2L_ON	0
 #define CMDCP2FS_ON	0
-#define CMDCD_ON	0
+#define CMDCD_ON	1
 #define CMDPWD_ON	1
 
 
@@ -701,16 +701,12 @@ int main (int argc, char * argv[])
 		
 	using_history();
 	stifle_history(200);	//max history entries
-	printf("DEBUG#35\n");
 	while (1)
 		{
-			printf("DEBUG#36\n");
 		cmdin = readline("Prompt > ");
-		printf("DEBUG#37\n");
 #ifdef COMMAND_DEBUG
 		printf ("%s\n", cmdin);
 #endif
-		printf("DEBUG#38\n");
 		cmd = malloc (strlen(cmdin) + 30);
 		strcpy (cmd, cmdin);
 		free (cmdin);
