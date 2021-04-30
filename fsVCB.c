@@ -81,7 +81,6 @@ Directory * createAndInitDir (ino_t parent, VCB * aVCB_ptr, Directory * rootDir)
         rootDir->entries[i].parent = parent;
         rootDir->entries[i].d_free = true;
     }
-    return dir;
 
     return rootDir;
 }

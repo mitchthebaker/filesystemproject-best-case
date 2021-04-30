@@ -40,7 +40,7 @@ int fs_init(){
     //  char * filename, 
     //  uint64_t * volSize, 
     //  uint64_t * blockSize
-    uint64_t volumeSize = 1000;
+    uint64_t volumeSize = 10000000;
     uint64_t blockSize = 512;
     blocksizeCache = blockSize;
     int fs_init_success = -1;
