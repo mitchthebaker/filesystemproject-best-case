@@ -69,8 +69,6 @@ int fs_isDir(char * path);		//return 1 if directory, 0 otherwise
 int fs_delete(char* filename);	//removes a file
 int fs_close();
 
-
-
 struct fs_stat
 	{
 	off_t     st_size;    		/* total size, in bytes */
