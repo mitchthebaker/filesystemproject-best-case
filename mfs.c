@@ -88,9 +88,9 @@ int fs_init(){
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
 		int params_set_dir = initRootDir(aVCB_ptr, root, freeSpaceBlocksWritten);
+
+        curDir = aVCB_ptr -> LBA_indexOf_freeSpace + freeSpaceBlocksWritten;
 	}
-    curDir = 6;
-    rootDir = 6;
 
     free (aVCB_ptr);
     free (root);
