@@ -35,6 +35,7 @@ typedef struct d_entry {
 typedef struct Directory {
     char name[MAX_NAME_LEN];
     int size;
+    ino_t my_location;
     ino_t parent;
     d_entry entries[MAX_NUM_ENTRIES];
     //d_entry *entries;      //should initialize this way (dynamically allocate) d_entry * entries

@@ -101,7 +101,29 @@ int fs_init(){
     return fs_init_success;
 }
 
+//function that returns d_entry * and takes a path
+int get_entry_from_path(char * path, d_entry * entry){
+    Directory cd;
+    LBAread(&cd, 1, curDir); //represents current directory
+    //look through entries associated with cd 
+    for(int i =0; i < cd.size; i++){
+        printf("path option: %s\n", cd.entries[i].d_name);
+        if(strcmp(cd.entries[i].d_name, path) == 0){
+            //if equal has been located so memcpy into entry 
+            memcpy(entry, &cd.entries[i], sizeof(d_entry));
+            //success
+            return 0;
+
+        }
+    
+
+    }
+    //not found
+    return 1;
+}
+
 char * fs_getcwd(char *buf, size_t size) {
+    //easier to put cwd in VCB 
 
     struct VCB *myVCB = malloc(512);
     myVCB = getVCB(myVCB);
@@ -116,7 +138,9 @@ char * fs_getcwd(char *buf, size_t size) {
 
     // New LBAread() updated with index of our root dir
     // Also printed out the current directory name and its parent
-    LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
+
+    //should start at current directory instead of root 
+    LBAread(curr, 1, curDir);
     // DEBUG prints
     // printf("current dir name: %s\n", curr->name);
     // printf("current dir parent: %ld\n", curr->parent);
@@ -130,6 +154,8 @@ char * fs_getcwd(char *buf, size_t size) {
         count++;
         LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curr->parent);
     }
+
+
     
     directoryNames[count] = malloc(sizeof(char) * 256);
     strcpy(directoryNames[count], curr->name);
@@ -147,8 +173,21 @@ char * fs_getcwd(char *buf, size_t size) {
     return fullPath;
 }
 
+
 int fs_setcwd(char *buf) {
-    return 0;
+  
+    printf("path=%s cwd=%d\n", buf, curDir);
+    d_entry entry;
+    if(get_entry_from_path(buf, &entry)==0){
+        printf("entry ino: %d\n", entry.d_ino);
+        //success so directory entry for given path has been found
+        //set the cwd var to innode 
+        curDir = entry.d_ino;
+        return 0;
+    }
+
+    return 1;
+    
     // struct VCB *myVCB = malloc(512);
     // loadVCB(myVCB);
     // Directory *curr;
@@ -163,15 +202,41 @@ int fs_setcwd(char *buf) {
     // }
 }
 
+//open directory
+fdDir * fs_opendir(const char *name){
+    d_entry entry;
+   // get_entry_from_path(name, &entry)
+   return 0;
+
+}
+
+//return 1 if file, 0 otherwise
+int fs_isFile(char * path){
+    //find item referenced by path:
+    //start at root directory which has well known inode
+    //find next link in path 
+    //find inode from file once located (directory entry has innode)
+
+
+}	
+
+//removes a file
+int fs_delete(char* filename){
+    //find file (fs open)
+
+}	
+
 
 int fs_close(){
     closePartitionSystem();
 }
 
 
+
 int fs_mkdir(const char *pathname, mode_t mode) {
     struct VCB *myVCB = malloc(512);
-    loadVCB(myVCB);
+    //loadVCB(myVCb); 
+    getVCB(myVCB);
     Directory *curr;
     curr = malloc(getBytes(sizeof(*curr)));
 
@@ -182,7 +247,9 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
     } else {
         curr = malloc(getBytes(sizeof(*curr)));
+        printf("%d\n", myVCB->sizeOfBlock);
         LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
+
     }
 
     /* Allocating blocks for new directory */
@@ -211,10 +278,11 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     /* Making new entry for the parent */
     u_int64_t sizeInBlocks = (sizeof(struct Directory) * curr->size);
-    newDir->entries[curr->size].d_ino = newDirPosition;
-    newDir->entries[curr->size].d_free = false;
-    newDir->entries[curr->size].d_type = 'd';
-    strcpy(newDir->entries[curr->size].d_name, pathname);
+    curr->entries[curr->size].d_ino = newDirPosition;
+    curr->entries[curr->size].d_free = false;
+    curr->entries[curr->size].d_type = 'd';
+    //works for now but should be filename instead of pathname later 
+    strcpy(curr->entries[curr->size].d_name, pathname);
     curr->size++;
 
     u_int64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->sizeOfBlock + 1;

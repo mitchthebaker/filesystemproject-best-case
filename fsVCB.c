@@ -105,6 +105,8 @@ int initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap){
     //location is LBA
     //size is # of dir entries * size of directory entry
 
+    root->size = 2;
+
     //create directory entry for .
     strcpy(root->entries[0].d_name, ".");
     root->entries[0].d_free = false;
