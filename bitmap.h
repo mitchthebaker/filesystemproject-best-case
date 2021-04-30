@@ -1,6 +1,7 @@
+#include <limits.h>
+
 #ifndef BITMAP_H
 #define BITMAP_H
-#include <limits.h>
 
 #define MAX_CHARS 128
 #define MAX_BITS MAX_CHARS*CHAR_BIT
@@ -9,6 +10,9 @@ struct bitmap_t {
     uint64_t volumeSize;
     uint64_t blockSize;
     uint64_t numberOfBlocks;
+    uint64_t freeSpaceBlocks;
+    uint8_t  freespace;
+
     unsigned char *isBlockFree;
     char * buf;
     uint64_t bufPosition;
@@ -37,5 +41,7 @@ void map_init(VCB * aVCB_ptr, struct bitmap_t* bitmap, uint64_t size, uint64_t t
 
 void mapinit_setBit(struct bitmap_t* bitmap, unsigned char* c, int bit, int pos);
 int mapinit_set(struct bitmap_t* bitmap, int val, int index); 
+
+int map_initialize(VCB * aVCB_ptr);
 
 #endif

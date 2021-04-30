@@ -63,7 +63,7 @@ int fs_init(){
 	}
 
 	// Otherwise, VCB is not initialized. Run initVCB() and loadVCB()
-    //run init root directory 
+    // Run init root directory 
 	else {
 		
 		// Initialize the parameters for our VCB structure and load into LBA
@@ -71,22 +71,23 @@ int fs_init(){
 		fs_init_success = (loadVCB(aVCB_ptr) == 0) ? 0 : fs_init_success;
 
         // Create bitmap and then initialize it
-        struct bitmap_t * aBitmap = create_bitmap(volumeSize, blockSize);
+        //struct bitmap_t * aBitmap = create_bitmap(volumeSize, blockSize);
 
         // Calculate total number of blocks bits in terms of bytes
-        uint64_t totalNumBytes = ceil((double) aBitmap->numberOfBlocks / 8);
+        //uint64_t totalNumBytes = ceil((double) aBitmap->numberOfBlocks / 8);
         //printf("total number of bytes: %ld\n", totalNumBytes);
 
         // Get the size of the bitmap, in terms of blocks, by dividing total bytes by the block size
-        uint64_t sizeOfBitmap = ceil((double) totalNumBytes / blockSize);
+        //uint64_t sizeOfBitmap = ceil((double) totalNumBytes / blockSize);
         //printf("size of bitmap: %ld\n", sizeOfBitmap);
 
         // Allocate memory for bitmap, then write to LBA
-        map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
+        //map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
+        int freeSpaceBlocksWritten = map_initialize(aVCB_ptr);
         
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
-		int params_set_dir = initRootDir(aVCB_ptr, root, sizeOfBitmap);
+		int params_set_dir = initRootDir(aVCB_ptr, root, freeSpaceBlocksWritten);
 	}
     curDir = 6;
     rootDir = 6;
@@ -98,11 +99,6 @@ int fs_init(){
     root = NULL;
 
     return fs_init_success;
-}
-
-
-int fs_close(){
-    closePartitionSystem();
 }
 
 char * fs_getcwd(char *buf, size_t size) {
@@ -165,4 +161,8 @@ int fs_setcwd(char *buf) {
     //     int entryBlockCount = (sizeof(struct d_entry) * curr->size) / myVCB->sizeOfBlock + 1;
     //     LBAread(entries, entryBlockCount, curr->)
     // }
+}
+
+int fs_close(){
+    closePartitionSystem();
 }

@@ -141,10 +141,11 @@ int initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap){
 // Load our VCB into the LBA at logical block 0
 int loadVCB(VCB * aVCB_ptr) {
 
+    // Since we are writing the VCB to block 0, decrement 'numberOfBlocks' param by 1
+    aVCB_ptr->numberOfBlocks--;
+
     // Write our VCB struct to logical block 0
     uint64_t blocksWritten = LBAwrite(aVCB_ptr, 1, 0);
-    printf("\nWriting to LBA...\n");
-    printf("blocksWritten: %ld\n", blocksWritten);
 
     // 'blocksWritten' will be 1 if the write was successful, therefore return 0 (OK)
     // -1 will be returned if the write to disk failed

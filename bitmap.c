@@ -12,16 +12,23 @@
 #define BIT_OFFSET(b) ((b%CHAR_BIT))
 
 struct bitmap_t* create_bitmap(int volumeSize, int blockSize){
-    struct bitmap_t* p = malloc(sizeof(struct bitmap_t));
+    struct bitmap_t* bitmap = malloc(sizeof(struct bitmap_t));
 
-    p->volumeSize = volumeSize;
-    p->blockSize = blockSize;
-    p->numberOfBlocks = ceil(volumeSize / blockSize) - 1; // -1 to account for VCB
-    p->buf = malloc(MINBLOCKSIZE);
-    p->bufPosition = 0;
-    p->isBlockFree = malloc(p->numberOfBlocks * sizeof(unsigned char));
+    //printf("size of uint8_t: %ld\n", sizeof(uint8_t));
 
-    return p;
+    bitmap->volumeSize = volumeSize;
+    bitmap->blockSize = blockSize;
+    bitmap->numberOfBlocks = ceil(volumeSize / blockSize) - 1; // -1 to account for VCB
+    //bitmap->freeSpaceBlocks = (bitmap->numberOfBlocks / bitmap->blockSize) + 1; // + 1 to account for decimal
+    //bitmap->freespace = malloc((sizeof(uint8_t) * bitmap->numberOfBlocks)); // Malloc the freespace size according to the total number of blocks
+
+
+    // May delete these if new implementations work
+    bitmap->buf = malloc(MINBLOCKSIZE);
+    bitmap->bufPosition = 0;
+    bitmap->isBlockFree = malloc(bitmap->numberOfBlocks * sizeof(unsigned char));
+
+    return bitmap;
 }
 
 int map_getBit(unsigned char* c, int pos){
@@ -84,6 +91,7 @@ void map_init(VCB * aVCB_ptr, struct bitmap_t* bitmap, uint64_t sizeInBlocks, ui
         // Signifies first block of freespace; set index to 'i + 1' since VCB is at index 0
         if(i == 0) {
             aVCB_ptr->LBA_indexOf_freeSpace = i + 1;
+            LBAwrite(aVCB_ptr, 1, 0);
         }
     }
 }
@@ -130,4 +138,42 @@ int mapinit_set(struct bitmap_t* bitmap, int val, int i) {
     mapinit_setBit(bitmap, &bitmap->isBlockFree[CHAR_OFFSET(i)], val, BIT_OFFSET(i));
 
     return 0;
+}
+
+// Initialize our map with initial values '1', which signifies that the blocks are free to use 
+// Otherwise, blocks allocated with values of '0' signify that the blocks are allocated
+int map_initialize(VCB * aVCB_ptr) {
+
+    // Calculate the total number of freespace blocks
+    uint64_t freeSpaceBlocks = (aVCB_ptr->numberOfBlocks / aVCB_ptr->sizeOfBlock) + 1; // +1 to account for rounding
+
+    // Allocate memory for freespace
+    uint8_t * freespace = malloc((sizeof(uint8_t) * aVCB_ptr->numberOfBlocks));
+
+    // Iterate over the total number of blocks, and set each freespace block to 1
+    // If the loop iterates past 'freeSpaceBlocks', then set these blocks to 0 since these are not for freespace
+    for(int i = 0; i < aVCB_ptr->numberOfBlocks; i++) {
+
+        if(i <= freeSpaceBlocks) {
+            freespace[i] = 1;
+        }
+        else {
+            freespace[i] = 0;
+        }
+    }
+
+    // Initialize the LBA position of where the freespace begins
+    aVCB_ptr->LBA_indexOf_freeSpace = 1;
+
+    // Now allocate the freespace position into the LBA
+    uint64_t blocksWritten = LBAwrite(freespace, freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
+    printf("number of freespace blocks written: %ld\n", blocksWritten);
+
+    // Initialize index of freespace in VCB, then update VCB in LBA
+    aVCB_ptr->LBA_indexOf_freeSpace = 1;
+    aVCB_ptr->freeSpaceBlocks = freeSpaceBlocks;
+    LBAwrite(aVCB_ptr, 1, 0);
+
+    // Return the total number of freespace blocks written
+    return blocksWritten;
 }
