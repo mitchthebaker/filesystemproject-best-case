@@ -174,7 +174,6 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     loadVCB(myVCB);
     Directory *curr;
     curr = malloc(getBytes(sizeof(*curr)));
-    struct d_entry *entries;
 
     /* Reading current directory and its entries */
     if (pathname[0] == '/') {
@@ -185,12 +184,11 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         curr = malloc(getBytes(sizeof(*curr)));
         LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
     }
-    entries = malloc(sizeof(getBytes(*entries)) * curr->size);
 
     /* Allocating blocks for new directory */
     u_int64_t newDirBlocks = (sizeof(Directory) / myVCB->sizeOfBlock) + 1;
-    u_int64_t newDirPosition = requestBlocks(myVCB, newDirBlocks);
-    allocateBlocks(myVCB, newDirBlocks, newDirPosition);
+    u_int64_t newDirPosition = requestFSBlocks(myVCB, newDirBlocks);
+    allocFSBlocks(myVCB, newDirBlocks, newDirPosition);
 
     /* Initializing new Directory and saving */
     Directory *newDir = malloc(getBytes(sizeof(*newDir)));
@@ -198,7 +196,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     newDir->parent = curDir;
     strcpy(newDir->name, pathname);
     for(int i = 0; i < MAX_NUM_ENTRIES; i++) {
-        newDir->entries[i].parent = parent;
+        newDir->entries[i].parent = curDir;
         newDir->entries[i].d_free = true;
     }
     strcpy(newDir->entries[0].d_name, ".");
@@ -213,13 +211,13 @@ int fs_mkdir(const char *pathname, mode_t mode) {
 
     /* Making new entry for the parent */
     u_int64_t sizeInBlocks = (sizeof(struct Directory) * curr->size);
-    entries[curr->size].d_ino = newDirPosition;
-    entries[curr->size].d_free = false;
-    entries[curr->size].d_type = 'd';
-    strcpy(entries[curr->size].d_name, pathname);
+    newDir->entries[curr->size].d_ino = newDirPosition;
+    newDir->entries[curr->size].d_free = false;
+    newDir->entries[curr->size].d_type = 'd';
+    strcpy(newDir->entries[curr->size].d_name, pathname);
     curr->size++;
 
-    u_int64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->blockSize + 1;
+    u_int64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->sizeOfBlock + 1;
     LBAwrite(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
 
     return 1;
