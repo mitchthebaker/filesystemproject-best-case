@@ -163,6 +163,64 @@ int fs_setcwd(char *buf) {
     // }
 }
 
+
 int fs_close(){
     closePartitionSystem();
+}
+
+
+int fs_mkdir(const char *pathname, mode_t mode) {
+    struct VCB *myVCB = malloc(512);
+    loadVCB(myVCB);
+    Directory *curr;
+    curr = malloc(getBytes(sizeof(*curr)));
+    struct d_entry *entries;
+
+    /* Reading current directory and its entries */
+    if (pathname[0] == '/') {
+        // do we know rootDir is always 1 block?
+        // might have to change this 1 
+        LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
+    } else {
+        curr = malloc(getBytes(sizeof(*curr)));
+        LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
+    }
+    entries = malloc(sizeof(getBytes(*entries)) * curr->size);
+
+    /* Allocating blocks for new directory */
+    u_int64_t newDirBlocks = (sizeof(Directory) / myVCB->sizeOfBlock) + 1;
+    u_int64_t newDirPosition = requestBlocks(myVCB, newDirBlocks);
+    allocateBlocks(myVCB, newDirBlocks, newDirPosition);
+
+    /* Initializing new Directory and saving */
+    Directory *newDir = malloc(getBytes(sizeof(*newDir)));
+    newDir->size = 2;
+    newDir->parent = curDir;
+    strcpy(newDir->name, pathname);
+    for(int i = 0; i < MAX_NUM_ENTRIES; i++) {
+        newDir->entries[i].parent = parent;
+        newDir->entries[i].d_free = true;
+    }
+    strcpy(newDir->entries[0].d_name, ".");
+    newDir->entries[0].d_free = false;
+    newDir->entries[0].d_type = 'd';
+    strcpy(newDir->entries[1].d_name, "..");
+    newDir->entries[1].d_free = false;
+    newDir->entries[1].d_type = 'd';
+
+    LBAwrite(newDir, newDirBlocks, newDirPosition);
+    free(newDir);
+
+    /* Making new entry for the parent */
+    u_int64_t sizeInBlocks = (sizeof(struct Directory) * curr->size);
+    entries[curr->size].d_ino = newDirPosition;
+    entries[curr->size].d_free = false;
+    entries[curr->size].d_type = 'd';
+    strcpy(entries[curr->size].d_name, pathname);
+    curr->size++;
+
+    u_int64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->blockSize + 1;
+    LBAwrite(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
+
+    return 1;
 }
