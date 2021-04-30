@@ -83,12 +83,14 @@ int fs_init(){
 
         // Allocate memory for bitmap, then write to LBA
         map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
-
+        
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
 		int params_set_dir = initRootDir(aVCB_ptr, root, sizeOfBitmap);
 	}
-    
+    curDir = 6;
+    rootDir = 6;
+
     free (aVCB_ptr);
     free (root);
 
@@ -109,9 +111,9 @@ char * fs_getcwd(char *buf, size_t size) {
     myVCB = getVCB(myVCB);
 
     Directory *curr = malloc(getBytes(sizeof(*curr)));
-
-    printf("currentDir: %ld\n", curDir);
-    printf("index of rootDir: %d\n", myVCB->LBA_indexOf_rootDir);
+    // DEBUG prints
+    // printf("currentDir: %ld\n", curDir);
+    // printf("index of rootDir: %d\n", myVCB->LBA_indexOf_rootDir);
 
     // Old LBAread() call
     //LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curDir);
@@ -119,25 +121,17 @@ char * fs_getcwd(char *buf, size_t size) {
     // New LBAread() updated with index of our root dir
     // Also printed out the current directory name and its parent
     LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
-    printf("current dir name: %s\n", curr->name);
-    printf("current dir parent: %ld\n", curr->parent);
+    // DEBUG prints
+    // printf("current dir name: %s\n", curr->name);
+    // printf("current dir parent: %ld\n", curr->parent);
 
-    return 0;
-
-    /*char **directoryNames = malloc(sizeof(char *) * 10);
+    char **directoryNames = malloc(sizeof(char *) * 10);
     int count = 0;
-    printf("ENTERING WHILE NOW\n");
-    while (strcmp(".", curr->name) != 0) {
+    while (strcmp("/", curr->name) != 0) {
         directoryNames[count] = malloc(sizeof(char) * 256);
         strcpy(directoryNames[count], curr->name);
         strcat(directoryNames[count], "/");
         count++;
-        printf("LOOPING IN WHILE\n");
-        if (rootDir == curr) {
-            printf("WE ARE AT ROOT DIR SIR\n");
-        } else {
-            printf("NOT A ROOT DIR\n");
-        }
         LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curr->parent);
     }
     
@@ -154,5 +148,21 @@ char * fs_getcwd(char *buf, size_t size) {
     free(directoryNames);
     free(myVCB);
     free(curr);
-    return fullPath;*/
+    return fullPath;
+}
+
+int fs_setcwd(char *buf) {
+    return 0;
+    // struct VCB *myVCB = malloc(512);
+    // loadVCB(myVCB);
+    // Directory *curr;
+    // if (buf[0] == '/') {
+    //     printf("STARTING FROM ROOT");
+    // } else {
+    //     curr = malloc(getBytes(sizeof(*curr)));
+    //     LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock), curDir);
+    //     struct d_entry *entries = malloc(sizeof(getBytes(*entries)) * curr->size);
+    //     int entryBlockCount = (sizeof(struct d_entry) * curr->size) / myVCB->sizeOfBlock + 1;
+    //     LBAread(entries, entryBlockCount, curr->)
+    // }
 }
