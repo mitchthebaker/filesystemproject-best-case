@@ -66,6 +66,7 @@ d_entry * createAndInitDir (ino_t parent, VCB * aVCB_ptr){
         dir[i].parent = parent;
         dir[i].d_free = true;
     }
+    return dir;
 
 }
 int initRootDir(VCB * aVCB_ptr, uint64_t sizeOfBitmap){
