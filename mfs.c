@@ -20,6 +20,8 @@
 #include "fsLow.h"
 #include "fsVCB.h"
 #include "bitmap.h"
+#include "fsDir.h"
+
 ino_t curDir = 0;
 ino_t rootDir = 0;
 uint64_t volumeSize;
@@ -65,21 +67,14 @@ int fs_init(){
 	// Otherwise, VCB is not initialized. Run initVCB() and loadVCB()
     // Run init root directory 
 	else {
-		
-		// Initialize the parameters for our VCB structure and load into LBA
-        fs_init_success = (initVCB(aVCB_ptr, volumeSize, blockSize) == 0) ? 0 : fs_init_success; 
-		fs_init_success = (loadVCB(aVCB_ptr) == 0) ? 0 : fs_init_success;
 
-        // Create bitmap and then initialize it
-        //struct bitmap_t * aBitmap = create_bitmap(volumeSize, blockSize);
+        // Initialize the parameters for our VCB structure and load into LBA
+        int init_s = initVCB(aVCB_ptr, volumeSize, blockSize);
+        int load_s = loadVCB(aVCB_ptr);
 
-        // Calculate total number of blocks bits in terms of bytes
-        //uint64_t totalNumBytes = ceil((double) aBitmap->numberOfBlocks / 8);
-        //printf("total number of bytes: %ld\n", totalNumBytes);
-
-        // Get the size of the bitmap, in terms of blocks, by dividing total bytes by the block size
-        //uint64_t sizeOfBitmap = ceil((double) totalNumBytes / blockSize);
-        //printf("size of bitmap: %ld\n", sizeOfBitmap);
+        // Check return values and update fs_init() return var
+        fs_init_success = (!init_s) ? 0 : fs_init_success; 
+		fs_init_success = (!load_s) ? 0 : fs_init_success;
 
         // Allocate memory for bitmap, then write to LBA
         //map_init(aVCB_ptr, aBitmap, sizeOfBitmap, totalNumBytes);
@@ -87,7 +82,7 @@ int fs_init(){
         
 		//initialize directory here?
 		//something like new directory = initDirectory(parent) --> should be null for root
-		int params_set_dir = initRootDir(aVCB_ptr, root, freeSpaceBlocksWritten);
+		uint64_t initRoot_s = initRootDir(aVCB_ptr, root, freeSpaceBlocksWritten);
 
         curDir = aVCB_ptr -> LBA_indexOf_freeSpace + freeSpaceBlocksWritten;
 	}
@@ -176,10 +171,10 @@ char * fs_getcwd(char *buf, size_t size) {
 
 int fs_setcwd(char *buf) {
   
-    printf("path=%s cwd=%d\n", buf, curDir);
+    printf("path=%s cwd=%ld\n", buf, curDir);
     d_entry entry;
     if(get_entry_from_path(buf, &entry)==0){
-        printf("entry ino: %d\n", entry.d_ino);
+        printf("entry ino: %ld\n", entry.d_ino);
         //success so directory entry for given path has been found
         //set the cwd var to innode 
         curDir = entry.d_ino;
@@ -234,11 +229,11 @@ int fs_close(){
 
 
 int fs_mkdir(const char *pathname, mode_t mode) {
+
     struct VCB *myVCB = malloc(512);
-    //loadVCB(myVCb); 
     getVCB(myVCB);
-    Directory *curr;
-    curr = malloc(getBytes(sizeof(*curr)));
+
+    Directory *curr = malloc(getBytes(sizeof(*curr)));
 
     /* Reading current directory and its entries */
     if (pathname[0] == '/') {
@@ -246,15 +241,21 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         // might have to change this 1 
         LBAread(curr, 1, myVCB->LBA_indexOf_rootDir);
     } else {
-        curr = malloc(getBytes(sizeof(*curr)));
-        printf("%d\n", myVCB->sizeOfBlock);
+        //curr = malloc(getBytes(sizeof(*curr)));
+        printf("%ld\n", myVCB->sizeOfBlock);
         LBAread(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
 
     }
 
     /* Allocating blocks for new directory */
-    u_int64_t newDirBlocks = (sizeof(Directory) / myVCB->sizeOfBlock) + 1;
-    u_int64_t newDirPosition = requestFSBlocks(myVCB, newDirBlocks);
+    uint64_t newDirBlocks = (sizeof(* curr) / myVCB->sizeOfBlock) + 1;
+    printf("size of curr: %ld\n", sizeof(* curr));
+    printf("size of curr / blockSize: %ld\n", (sizeof(* curr) / myVCB->sizeOfBlock + 1));
+    printf("newDirBlocks: %ld\n", newDirBlocks);
+
+    uint64_t newDirPosition = requestFSBlocks(myVCB, newDirBlocks);
+    printf("newDirPosition: %ld\n", newDirPosition);
+
     allocFSBlocks(myVCB, newDirBlocks, newDirPosition);
 
     /* Initializing new Directory and saving */
@@ -277,7 +278,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     free(newDir);
 
     /* Making new entry for the parent */
-    u_int64_t sizeInBlocks = (sizeof(struct Directory) * curr->size);
+    uint64_t sizeInBlocks = (sizeof(struct Directory) * curr->size);
     curr->entries[curr->size].d_ino = newDirPosition;
     curr->entries[curr->size].d_free = false;
     curr->entries[curr->size].d_type = 'd';
@@ -285,8 +286,10 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     strcpy(curr->entries[curr->size].d_name, pathname);
     curr->size++;
 
-    u_int64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->sizeOfBlock + 1;
+    uint64_t newSizeInBlocks = (sizeof(struct Directory) * curr->size) / myVCB->sizeOfBlock + 1;
     LBAwrite(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
+
+    free(curr);
 
     return 1;
 }

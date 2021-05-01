@@ -27,8 +27,8 @@ typedef struct VCB {
     uint64_t numberOfBlocksRemaining;
     uint64_t sizeOfBlock;      // We need to know the size of each block (512)
     uint64_t freeSpaceBlocks;  // Keep track of the number of freespace blocks 
-    int LBA_indexOf_rootDir;   // Important so we know where the root dir starts in the LBA 
-    int LBA_indexOf_freeSpace; // We must know where the freespace begins in the LBA 
+    uint64_t LBA_indexOf_rootDir;   // Important so we know where the root dir starts in the LBA 
+    uint64_t LBA_indexOf_freeSpace; // We must know where the freespace begins in the LBA 
     int magicNumber;           // We use this number to determine if our VCB is initialized
   //  ino_t cwd;                  //index of current working directory
 } VCB;
@@ -49,7 +49,7 @@ VCB * getVCB(VCB * aVCB_ptr);
 
 //Tania
 //initialize all of the parameters in the directory structure 
-int initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap);
+uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap);
 
 //function that will create and initizalize empty directory entries in memory 
 //d_entry * createAndInitDir(ino_t parent,  VCB * aVCB_ptr);

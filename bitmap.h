@@ -1,4 +1,5 @@
 #include <limits.h>
+#include "fsVCB.h"
 
 #ifndef BITMAP_H
 #define BITMAP_H

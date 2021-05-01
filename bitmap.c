@@ -31,17 +31,17 @@ int map_initialize(VCB * aVCB_ptr) {
         }
     }
 
-    // Initialize the LBA position of where the freespace begins
-    aVCB_ptr->LBA_indexOf_freeSpace = 1;
-
-    // Now allocate the freespace position into the LBA
-    uint64_t blocksWritten = LBAwrite(freespace, freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
-    printf("number of freespace blocks written: %ld\n", blocksWritten);
-
-    // Initialize index of freespace in VCB, then update VCB in LBA
+    // Initialize index of freespace in VCB, then update total number of freespace blocks
+    // After, update VCB in LBA
     aVCB_ptr->LBA_indexOf_freeSpace = 1;
     aVCB_ptr->freeSpaceBlocks = freeSpaceBlocks;
     LBAwrite(aVCB_ptr, 1, 0);
+
+    // Now allocate the freespace position into the LBA
+    uint64_t blocksWritten = LBAwrite(freespace, aVCB_ptr->freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
+
+    // Free the memory allocated for total number of freespace blocks
+    free(freespace);
 
     // Return the total number of freespace blocks written
     return blocksWritten;
@@ -51,14 +51,14 @@ int map_initialize(VCB * aVCB_ptr) {
 uint64_t allocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToAlloc, uint64_t blockPos) {
 
     printf("\n----------------------\n");
-    printf("numBlocks: %ld\n", aVCB_ptr->numberOfBlocks);
-    printf("FSBlocks: %ld\n", aVCB_ptr->freeSpaceBlocks);
+    printf("numBlocksToAlloc: %ld.. at block pos %ld\n", numBlocksToAlloc, blockPos);
     printf("----------------------\n\n");
 
+    // Allocate memory for the total number of freespace blocks
     uint8_t * freespaceLBA = malloc((sizeof(uint8_t) * aVCB_ptr->numberOfBlocks));
 
-    // Get the updated freespace from LBA and set it equal to 'freespaceLBA'
-    // so we have an updated version saved in memory
+    // Get the updated freespace from LBA and set it equal to 'freespaceLBA'.
+    // Now we have an updated version in memory
     LBAread(freespaceLBA, aVCB_ptr->freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
 
     // Iterate over the total number of blocks specified we'd like to allocate
@@ -70,8 +70,9 @@ uint64_t allocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToAlloc, uint64_t block
     }
 
     // Now write the updated freespace back to the LBA
-    uint64_t blocksWritten = LBAwrite(freespaceLBA, aVCB_ptr->freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
+    uint64_t blocksWritten = LBAwrite(freespaceLBA, numBlocksToAlloc, blockPos);
 
+    // Free the memory allocated for total number of freespace blocks
     free(freespaceLBA);
 
     // Return the number of blocks written to LBA
@@ -81,6 +82,7 @@ uint64_t allocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToAlloc, uint64_t block
 // Deallocate some amount of blocks from the LBA
 uint64_t deallocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToDealloc, uint64_t blockPos) {
 
+    // Allocate memory for the total number of freespace blocks
     uint8_t * freespaceLBA = malloc((sizeof(uint8_t) * aVCB_ptr->numberOfBlocks));
 
     // Get the updated freespace from LBA and set it equal to 'freespaceLBA'
@@ -96,8 +98,11 @@ uint64_t deallocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToDealloc, uint64_t b
     }
 
     // Now write the updated freespace back to the LBA
-    uint64_t blocksWritten = LBAwrite(freespaceLBA, aVCB_ptr->freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
+    //
+    // ***IMPORTANT CHANGE 2/3 PARAMS TO numBlocksToDealloc, blockPos, NOT FREESPACE BLOCKS, FREESPACE INDEX
+    uint64_t blocksWritten = LBAwrite(freespaceLBA, numBlocksToDealloc, blockPos);
 
+    // Free the memory allocated for total number of freespace blocks
     free(freespaceLBA);
 
     // Return the number of blocks written to LBA
@@ -107,8 +112,11 @@ uint64_t deallocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToDealloc, uint64_t b
 // Request a certain amount of blocks from the LBA
 uint64_t requestFSBlocks(VCB * aVCB_ptr, uint64_t numFSBlocksRequested) {
 
+    // Allocate memory for the total number of freespace blocks
     uint8_t * freespaceLBA = malloc((sizeof(uint8_t) * aVCB_ptr->numberOfBlocks));
 
+    // Get the updated freespace from LBA and set it equal to 'freespaceLBA'
+    // so we have an updated version saved in memory
     LBAread(freespaceLBA, aVCB_ptr->freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
 
     // Iterate over the total number of blocks on the LBA
@@ -121,14 +129,16 @@ uint64_t requestFSBlocks(VCB * aVCB_ptr, uint64_t numFSBlocksRequested) {
 
             // if 'j - i' equals the amount of blocks requested, then return the index
             if(j - i >= numFSBlocksRequested) {
-                
+
                 free(freespaceLBA);
                 return i;
             }
         }
     }
 
+    // Free the memory allocated for total number of freespace blocks
     free(freespaceLBA);
+
     return 0;
 }
 

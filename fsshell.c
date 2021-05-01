@@ -693,7 +693,7 @@ int main (int argc, char * argv[])
 		
 	// Init the file system, first and moremost
 	int ret = fs_init();
-	printf("return Value: %d\n", ret);
+	printf("\nVolume initialized, status %d\n\n", ret);
 
 	char * cmdin;
 	char * cmd;
