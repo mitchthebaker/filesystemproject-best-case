@@ -202,7 +202,7 @@ fdDir * fs_opendir(const char *name){
     d_entry entry;
     get_entry_from_path(name, &entry);
     
-    return ;
+    return 0;
 }
 
 //return 1 if file, 0 otherwise

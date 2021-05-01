@@ -106,7 +106,7 @@
 #define DIRMAX_LEN		4096
 
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
-#define CMDLS_ON	1
+#define CMDLS_ON	0
 #define CMDCP_ON	0
 #define CMDMV_ON	0
 #define CMDMD_ON	1
