@@ -97,28 +97,40 @@ int fs_init(){
 }
 
 //function that returns d_entry * and takes a path
-int get_entry_from_path(char * path, d_entry * entry){
-    Directory cd;
-    LBAread(&cd, 1, curDir); //represents current directory
-    //look through entries associated with cd 
-    for(int i =0; i < cd.size; i++){
-        printf("path option: %s\n", cd.entries[i].d_name);
-        if(strcmp(cd.entries[i].d_name, path) == 0){
-            //if equal has been located so memcpy into entry 
-            memcpy(entry, &cd.entries[i], sizeof(d_entry));
-            //success
-            return 0;
+//need to add stuff bc rn can only handle if theres no "/" (relative) 
+//if '/' starts from root (absolute)
 
-        }
-    
+int get_entry_from_path(struct VCB *vcb, char * path, d_entry * entry){
+    //calculating num of blocks to read and allocating space 
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+    Directory *cd = malloc(dirNumBlocks * vcb->sizeOfBlock);
+    //reading the directory out
+
+    //a\b 
+    if(path[0] == '/'){
+        LBAread(cd, dirNumBlocks, vcb->LBA_indexOf_rootDir); 
+        memcpy(entry, &cd->entries[0], sizeof(d_entry));
+        return 0;
 
     }
+    LBAread(cd, dirNumBlocks, curDir); //represents current directory
+    //look through entries associated with cd 
+    for(int i =0; i < cd->size; i++){
+        printf("path option: %s\n", cd->entries[i].d_name);
+        if(strcmp(cd->entries[i].d_name, path) == 0){
+            //if equal has been located so memcpy into entry 
+            memcpy(entry, &cd->entries[i], sizeof(d_entry));
+            //success
+            free(cd);
+            return 0;
+        }
+    }
+    free(cd);
     //not found
     return 1;
 }
 
 char * fs_getcwd(char *buf, size_t size) {
-    //easier to put cwd in VCB 
 
     struct VCB *myVCB = malloc(512);
     myVCB = getVCB(myVCB);
@@ -170,10 +182,12 @@ char * fs_getcwd(char *buf, size_t size) {
 
 
 int fs_setcwd(char *buf) {
-  
+    struct VCB *vcb = malloc(512);
+    vcb = getVCB(vcb);
+
     printf("path=%s cwd=%ld\n", buf, curDir);
     d_entry entry;
-    if(get_entry_from_path(buf, &entry)==0){
+    if(get_entry_from_path(vcb, buf, &entry)==0){
         printf("entry ino: %ld\n", entry.d_ino);
         //success so directory entry for given path has been found
         //set the cwd var to innode 
@@ -199,9 +213,50 @@ int fs_setcwd(char *buf) {
 
 //open directory
 fdDir * fs_opendir(const char *name){
+    struct VCB *vcb = malloc(512);
+    getVCB(vcb);
+
     d_entry entry;
-    get_entry_from_path(name, &entry);
-    
+    get_entry_from_path(vcb, name, &entry);
+
+    fdDir * ret = malloc(sizeof(fdDir));
+    ret->d_reclen = sizeof(fdDir);
+
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+
+    Directory *dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
+    LBAread(dir, dirNumBlocks, entry.d_ino);
+
+    ret->numEntries = dir->size;
+    ret->entries = malloc(sizeof(struct fs_diriteminfo) * dir->size);
+    ret->curEntry = 0;
+
+    for (int i = 0; i < dir->size; i++) {
+        strcpy(ret->entries[i].d_name, dir->entries[i].d_name);
+        ret->entries[i].fileType = dir->entries[i].d_type;
+        ret->entries[i].d_reclen = sizeof(struct fs_diriteminfo);
+    }
+
+    // dir->dirEntryPosition = 0;
+    // dir->directoryStartLocation = entry.d_ino;
+    free(dir);
+    return ret;
+}
+
+int fs_closedir(fdDir *dirp){
+    free(dirp->entries);
+    free(dirp);
+    return 0;
+}
+
+struct fs_diriteminfo *fs_readdir(fdDir *dirp){
+    if (dirp->curEntry >= dirp->numEntries) {
+        return NULL;
+    }
+    return &dirp->entries[dirp->curEntry++];
+}
+
+int fs_stat(const char *path, struct fs_stat *buf) {
     return 0;
 }
 
@@ -212,8 +267,12 @@ int fs_isFile(char * path){
     //find next link in path 
     //find inode from file once located (directory entry has innode)
 
-
+    return 0;
 }	
+
+int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
+    return 0;
+}
 
 //removes a file
 int fs_delete(char* filename){

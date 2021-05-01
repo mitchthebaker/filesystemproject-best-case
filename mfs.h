@@ -45,8 +45,9 @@ typedef struct
 	{
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
 	unsigned short  d_reclen;		/*length of this record */
-	unsigned short	dirEntryPosition;	/*which directory entry position, like file pos */
-	uint64_t	directoryStartLocation;		/*Starting LBA of directory */
+	struct fs_diriteminfo *entries;
+	unsigned short numEntries;
+	unsigned short	curEntry;	/*which directory entry position, like file pos */
 	} fdDir;
 
 int fs_init();
