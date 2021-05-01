@@ -66,11 +66,11 @@ uint64_t allocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToAlloc, uint64_t block
     for(i = 0; i < numBlocksToAlloc; i++) {
 
         // Set the specified blocks to 1, meaning they are now allocated
-        freespaceLBA[blockPos + i] == 1;
+        freespaceLBA[blockPos + i] = 1;
     }
 
     // Now write the updated freespace back to the LBA
-    uint64_t blocksWritten = LBAwrite(freespaceLBA, numBlocksToAlloc, blockPos);
+    uint64_t blocksWritten = LBAwrite(freespaceLBA, aVCB_ptr->freeSpaceBlocks, aVCB_ptr->LBA_indexOf_freeSpace);
 
     // Free the memory allocated for total number of freespace blocks
     free(freespaceLBA);

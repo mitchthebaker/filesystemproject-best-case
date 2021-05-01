@@ -79,11 +79,7 @@ Directory * createAndInitDir (ino_t parent, VCB * aVCB_ptr, Directory * rootDir)
 }
 
 uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap){
-    
     Directory * root = createAndInitDir(0, aVCB_ptr, rootDir);
-
-    //point lba to where the freespace ends, (index of freespace = 1 + sizeOfBitmap)
-    int LBA = aVCB_ptr -> LBA_indexOf_freeSpace + sizeOfBitmap;
 
     /*int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
      //multiply and add (block size - 1) then / by block size to get the # of blocks 
@@ -93,23 +89,6 @@ uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap)
 
     //location is LBA
     //size is # of dir entries * size of directory entry
-
-    root->size = 2;
-
-    //create directory entry for .
-    strcpy(root->entries[0].d_name, ".");
-    root->entries[0].d_free = false;
-    //type of file is directory
-    root->entries[0].d_type = 'd';
-
-    //for .. if parent == null it's the LBA, otherwise: its the parent
-    //if parent == null ? LBA : parent
-    //size = parent (sizeof(parent)), type of file is directory
-    //create directory entry for ..
-    strcpy(root->entries[1].d_name, "..");
-    root->entries[1].d_free = false;
-    //type of file is directory
-    root->entries[1].d_type = 'd';
 
     // Now that the root dir is initialized, get the total size of root, divide by the block size, + 1 
     // to get the total number of root blocks to allocate
@@ -123,11 +102,32 @@ uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap)
     uint64_t blocksAllocated = allocFSBlocks(aVCB_ptr, rootBlocks, rootPosition);
     printf("blocks allocated: %ld\n", blocksAllocated);
 
+    root->size = 2;
+
+    //create directory entry for .
+    strcpy(root->entries[0].d_name, ".");
+    root->entries[0].d_free = false;
+    //type of file is directory
+    root->entries[0].d_type = 'd';
+    root->entries[0].d_ino = rootPosition;
+    root->entries[0].parent = rootPosition;
+
+    //for .. if parent == null it's the LBA, otherwise: its the parent
+    //if parent == null ? LBA : parent
+    //size = parent (sizeof(parent)), type of file is directory
+    //create directory entry for ..
+    strcpy(root->entries[1].d_name, "..");
+    root->entries[1].d_free = false;
+    //type of file is directory
+    root->entries[1].d_type = 'd';
+    root->entries[1].d_ino = rootPosition;
+    root->entries[1].parent = rootPosition;
+
     //write directory entries to the file system
-    LBAwrite(root, rootBlocks, LBA);
+    LBAwrite(root, rootBlocks, rootPosition);
 
     // After updating index of rootDir to 'LBA', write the changes to LBA
-    aVCB_ptr->LBA_indexOf_rootDir = LBA;
+    aVCB_ptr->LBA_indexOf_rootDir = rootPosition;
     LBAwrite(aVCB_ptr, 1, 0);
 
     //root->parent = LBA;

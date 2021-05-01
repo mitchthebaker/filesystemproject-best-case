@@ -84,7 +84,7 @@ int fs_init(){
 		//something like new directory = initDirectory(parent) --> should be null for root
 		uint64_t initRoot_s = initRootDir(aVCB_ptr, root, freeSpaceBlocksWritten);
 
-        curDir = aVCB_ptr -> LBA_indexOf_freeSpace + freeSpaceBlocksWritten;
+        curDir = aVCB_ptr->LBA_indexOf_rootDir;
 	}
 
     free (aVCB_ptr);
@@ -200,9 +200,9 @@ int fs_setcwd(char *buf) {
 //open directory
 fdDir * fs_opendir(const char *name){
     d_entry entry;
-   // get_entry_from_path(name, &entry)
-   return 0;
-
+    get_entry_from_path(name, &entry);
+    
+    return ;
 }
 
 //return 1 if file, 0 otherwise
@@ -267,12 +267,16 @@ int fs_mkdir(const char *pathname, mode_t mode) {
         newDir->entries[i].parent = curDir;
         newDir->entries[i].d_free = true;
     }
+
     strcpy(newDir->entries[0].d_name, ".");
     newDir->entries[0].d_free = false;
     newDir->entries[0].d_type = 'd';
+    newDir->entries[0].d_ino = newDirPosition;
+
     strcpy(newDir->entries[1].d_name, "..");
     newDir->entries[1].d_free = false;
     newDir->entries[1].d_type = 'd';
+    newDir->entries[1].d_ino = newDir->parent;
 
     LBAwrite(newDir, newDirBlocks, newDirPosition);
     free(newDir);
