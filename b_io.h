@@ -1,7 +1,7 @@
 /**************************************************************
-* Class:  CSC-415-0# 
-* Name:
-* Student ID:
+* Class:  CSC-415-01
+* Name: Tania Nemeth
+* Student ID: 920680290
 * Project: File System Project
 *
 * File: b_io.h
