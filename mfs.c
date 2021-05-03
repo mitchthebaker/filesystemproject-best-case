@@ -266,11 +266,42 @@ int fs_isFile(char * path){
     //start at root directory which has well known inode
     //find next link in path 
     //find inode from file once located (directory entry has innode)
+    struct VCB *vcb = malloc(512);
+    getVCB(vcb);
+    d_entry entry;
+      if(get_entry_from_path(vcb, path, &entry)==0){
+        //success so directory entry for given path has been found
+        if(entry.d_type == 'f'){
+            return 1;
+            printf("file found");
+
+        }
+        return 0;
+    }
+    printf("item by this name does not exist in the file system");
 
     return 0;
 }	
 
 int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
+  //find item referenced by path:
+    //start at root directory which has well known inode
+    //find next link in path 
+    //find inode from file once located (directory entry has innode)
+    struct VCB *vcb = malloc(512);
+    getVCB(vcb);
+    d_entry entry;
+      if(get_entry_from_path(vcb, path, &entry)==0){
+        //success so directory entry for given path has been found
+        if(entry.d_type == 'd'){
+            return 1;
+            printf("directory found");
+
+        }
+        return 0;
+    }
+    printf("item by this name does not exist in the file system");
+
     return 0;
 }
 
