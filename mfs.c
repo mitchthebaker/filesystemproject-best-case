@@ -211,6 +211,78 @@ int fs_setcwd(char *buf) {
     // }
 }
 
+// Removes a directory
+int fs_rmdir(const char * pathname) {
+
+    printf("pathname: %s\n", pathname);
+    printf("cwd: %ld\n", curDir);
+
+    // Get updated VCB from LBA
+    struct VCB * vcb = malloc(MINBLOCKSIZE);
+    getVCB(vcb);
+
+    // Get the entry from the specified pathname so we can use its 'd_ino' number
+    d_entry entry;
+    get_entry_from_path(vcb, pathname, &entry);
+
+    // Initialize to number of blocks for a directory
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+
+    ino_t rmDirPos;
+    ino_t rmDirEntryPos;
+
+    Directory * dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
+
+    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
+
+    bool found = false;
+
+    LBAread(dir, dirNumBlocks, curDir);
+
+    char * token;
+
+    char * name = malloc(sizeof(char) * strlen(pathname));
+    strcpy(name, pathname);
+    token = strtok(name, "/");
+    int counter = 0;
+
+    while(counter < dir->size && token != NULL) {
+        
+        if(strcmp(token, dir->entries[counter].d_name) == 0) {
+
+            token = strtok(NULL, "/");
+
+            if(token == NULL) {
+                found = true;
+                rmDirEntryPos = counter;
+                rmDirPos = dir->entries[counter].d_ino;
+                
+                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
+                
+                printf("dir->entries[counter].d_ino: %ld\n", dir->entries[counter].d_ino);
+                LBAread(dir, dirEntryNumBlocks, dir->entries[counter].d_ino);
+            }
+        }
+        else {
+            counter++;
+        }
+    }
+
+    if(found && dir->size == 2) {
+
+        // Deallocate the size of the Directory to remove from freespace
+        deallocFSBlocks(vcb, ((sizeof(Directory) / MINBLOCKSIZE) + 1), rmDirPos);
+
+        LBAwrite(dir, ((sizeof(* dir) / MINBLOCKSIZE) + 1), rmDirPos);
+    }
+
+    free(name);
+    free(rmdirEntry);
+    free(dir);
+    free(vcb);
+    return 0;
+}
+
 //open directory
 fdDir * fs_opendir(const char *name){
     struct VCB *vcb = malloc(512);
@@ -233,6 +305,7 @@ fdDir * fs_opendir(const char *name){
 
     for (int i = 0; i < dir->size; i++) {
         strcpy(ret->entries[i].d_name, dir->entries[i].d_name);
+        ret->entries[i].fileType = dir->entries[i].d_ino;
         ret->entries[i].fileType = dir->entries[i].d_type;
         ret->entries[i].d_reclen = sizeof(struct fs_diriteminfo);
     }
@@ -280,10 +353,11 @@ int fs_isFile(char * path){
     }
     printf("item by this name does not exist in the file system");
 
-    return 0;
+    return 1;
 }	
 
 int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
+
   //find item referenced by path:
     //start at root directory which has well known inode
     //find next link in path 
@@ -319,6 +393,8 @@ int fs_close(){
 
 
 int fs_mkdir(const char *pathname, mode_t mode) {
+
+    printf("pathname: %s\n", pathname);
 
     struct VCB *myVCB = malloc(512);
     getVCB(myVCB);
