@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
-
+#include "fsDir.h"
 #include "b_io.h"
 
 #include <dirent.h>
@@ -35,6 +35,7 @@ typedef u_int32_t uint32_t;
 
 struct fs_diriteminfo
 	{
+	ino_t d_ino;
     unsigned short d_reclen;    /* length of this record */
     unsigned char fileType;    
     char d_name[256]; 			/* filename max filename is 255 characters */
@@ -45,7 +46,7 @@ typedef struct
 	{
 	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
 	unsigned short  d_reclen;		/*length of this record */
-	struct fs_diriteminfo *entries;
+	struct fs_diriteminfo * entries;
 	unsigned short numEntries;
 	unsigned short	curEntry;	/*which directory entry position, like file pos */
 	} fdDir;
