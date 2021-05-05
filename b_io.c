@@ -15,8 +15,11 @@
 #include <unistd.h>
 #include <string.h>
 #include "b_io.h"
+#include "mfs.h"
+#include "fsVCB.h"
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
+uint64_t buf_size;
 
 //part of this struct is taken directly from my assignment 5 buffered write in b_io.c 
 typedef struct b_fcb
@@ -35,31 +38,31 @@ int startup = 0;	//Indicates that this has not been initialized
 //Method to initialize our file system from assignment 5 
 void b_init ()
 	{
-	//init fcbArray to all free
-	for (int i = 0; i < MAXFCBS; i++)
-		{
-		fcbArray[i].linuxFd = -1; //indicates a free fcbArray
-		}
-		
-	startup = 1;
+        //init fcbArray to all free
+        for (int i = 0; i < MAXFCBS; i++)
+            {
+            fcbArray[i].linuxFd = -1; //indicates a free fcbArray
+            }
+            
+        startup = 1;
 	}
 
 //Method to get a free FCB element from assignment 5
 int b_getFCB ()
 	{
-	for (int i = 0; i < MAXFCBS; i++)
-		{
-		if (fcbArray[i].linuxFd == -1)
-			{
-			fcbArray[i].linuxFd = -2; // used but not assigned
-			return i;		//Not thread safe
-			}
-		}
-	return (-1);  //all in use
-	}
+        for (int i = 0; i < MAXFCBS; i++)
+            {
+            if (fcbArray[i].linuxFd == -1)
+                {
+                fcbArray[i].linuxFd = -2; // used but not assigned
+                return i;		//Not thread safe
+                }
+            }
+        return (-1);  //all in use
+        }
 
 //taken from my (Tania) assignment 5 buffered write implementation of b_open with tweaks 
-int b_open (char * filename, int flags)
+int b_open(char * filename, int flags)
 {
 	int fd;
 	int returnFd;
@@ -69,7 +72,7 @@ int b_open (char * filename, int flags)
 	// lets try to open the file before I do too much other work
 	//opne the file with the given flags & make sure the permissions are correct 
 	//attribute: https://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
-	fd = open (filename, flags, 0666);	// --> does this need to be changed for file system? 
+	fd = open(filename, flags, 0666);	// --> does this need to be changed for file system? 
 	if (fd  == -1)
 		return (-1);		//error opening filename
 
@@ -79,7 +82,7 @@ int b_open (char * filename, int flags)
 	//	release mutex
 	
 	//allocate our read ops buffer
-	fcbArray[returnFd].buf = malloc (B_CHUNK_SIZE);
+	fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 	if (fcbArray[returnFd].buf  == NULL)
 		{
 		// very bad, we can not allocate our buffer
@@ -158,7 +161,7 @@ int b_read(int fd, char * buffer, int count)
 		
 	if (part2 > 0) 	//blocks to copy direct to callers buffer
 		{
-		bytesRead = read (fcbArray[fd].linuxFd, buffer+part1, numberOfBlocksToCopy*B_CHUNK_SIZE);
+		bytesRead = read(fcbArray[fd].linuxFd, buffer+part1, numberOfBlocksToCopy*B_CHUNK_SIZE);
 		part2 = bytesRead;  //might be less if we hit the end of the file
 		
 		// Alternative version that only reads one block at a time
@@ -176,7 +179,7 @@ int b_read(int fd, char * buffer, int count)
 	if (part3 > 0)	//We need to refill our buffer to copy more bytes to user
 		{		
 		//try to read B_CHUNK_SIZE bytes into our buffer
-		bytesRead = read (fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
+		bytesRead = read(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
 		
 		// we just did a read into our buffer - reset the offset and buffer length.
 		fcbArray[fd].index = 0;
@@ -197,7 +200,7 @@ int b_read(int fd, char * buffer, int count)
 
 // Interface to for buffered write taken from Tania's assignemt 5 implementation 
 // and modified to work for file system 
-int b_write (int fd, char * buffer, int count)
+int b_write(int fd, char * buffer, int count)
 	{
 		int bytes_remaining_in_my_buffer;
 		int bytes_written;
@@ -264,13 +267,13 @@ int b_write (int fd, char * buffer, int count)
 
 // Interface to for buffered close taken from Tania's assignemt 5 implementation 
 // and modified to work for file system 
-void b_close (int fd)
+void b_close(int fd)
 	{
-	write(fcbArray[fd].linuxFd, fcbArray[fd].buf, fcbArray[fd].index);		//writing out the rest of what's in our buffer from part 3
-	close (fcbArray[fd].linuxFd);		// close the linux file handle
-	free (fcbArray[fd].buf);			// free the associated buffer
-	fcbArray[fd].buf = NULL;			// Safety First
-	fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
+        write(fcbArray[fd].linuxFd, fcbArray[fd].buf, fcbArray[fd].index);		//writing out the rest of what's in our buffer from part 3
+        close (fcbArray[fd].linuxFd);		// close the linux file handle
+        free (fcbArray[fd].buf);			// free the associated buffer
+        fcbArray[fd].buf = NULL;			// Safety First
+        fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
 	}
 	
 
