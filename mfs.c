@@ -101,33 +101,56 @@ int fs_init(){
 //if '/' starts from root (absolute)
 
 int get_entry_from_path(struct VCB *vcb, char * path, d_entry * entry){
+    
     //calculating num of blocks to read and allocating space 
     uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
     Directory *cd = malloc(dirNumBlocks * vcb->sizeOfBlock);
     //reading the directory out
 
-    //a\b 
+    d_entry *cur;
+    // absolute path
     if(path[0] == '/'){
         LBAread(cd, dirNumBlocks, vcb->LBA_indexOf_rootDir); 
-        memcpy(entry, &cd->entries[0], sizeof(d_entry));
-        return 0;
+        cur = &cd->entries[0];
 
+        // memcpy(entry, &cd->entries[0], sizeof(d_entry));
+        // return 0;
     }
-    LBAread(cd, dirNumBlocks, curDir); //represents current directory
-    //look through entries associated with cd 
-    for(int i =0; i < cd->size; i++){
-        printf("path option: %s\n", cd->entries[i].d_name);
-        if(strcmp(cd->entries[i].d_name, path) == 0){
-            //if equal has been located so memcpy into entry 
-            memcpy(entry, &cd->entries[i], sizeof(d_entry));
-            //success
-            free(cd);
-            return 0;
+    //relative path
+    else {
+        LBAread(cd, dirNumBlocks, curDir); 
+        cur = &cd->entries[0];
+    }
+    //copy path since strtok changes things
+    char *path_copy = malloc(strlen(path));
+    strcpy(path_copy, path);
+    char *next_dir = strtok(path_copy, "/");
+    while (next_dir != NULL) {
+        LBAread(cd, dirNumBlocks, cur->d_ino);
+        bool found = false;
+        for(int i =0; i < cd->size; i++){
+            if(strcmp(cd->entries[i].d_name, next_dir) == 0){
+                //if equal has been located so set cur to the next dir entry
+                cur = &cd->entries[i];
+                found = true;
+                break;
+            }
         }
+        if (!found) {
+            // couldn't find next directory
+            free(cd);
+            free(path_copy);
+            return 1;
+        }
+
+        next_dir = strtok(NULL, "/");
     }
+
+    // we found it so copy into entry and return success
+    memcpy(entry, cur, sizeof(d_entry));
     free(cd);
-    //not found
-    return 1;
+    free(path_copy);
+    return 0;
 }
 
 char * fs_getcwd(char *buf, size_t size) {
