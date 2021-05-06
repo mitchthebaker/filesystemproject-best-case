@@ -22,14 +22,15 @@
 uint64_t buf_size;
 
 //part of this struct is taken directly from my assignment 5 buffered write in b_io.c 
-typedef struct b_fcb
-	{
+typedef struct b_fcb {
 	int linuxFd;	//holds the systems file descriptor
 	char * buf;		//holds the open file buffer for reading 
 	int index;		//holds the current position in the buffer
 	int buflen;		//holds how many valid bytes are in the buffer
-    //something for inodes & end of file ?
-	} b_fcb;
+	int blockCount;
+	int lastBlockByteCount;
+  ino_t d_ino[10];
+} b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];
 
@@ -100,7 +101,7 @@ int b_open(char * filename, int flags)
 // and modified to work for file system 
 int b_read(int fd, char * buffer, int count)
 {
-    	//*** TODO ***:  Write buffered read function to return the data and # bytes read
+  //*** TODO ***:  Write buffered read function to return the data and # bytes read
 	//               You must use the Linux System Calls (read) and you must buffer the data
 	//				 in 512 byte chunks. i.e. your linux read must be in B_CHUNK_SIZE
 		
@@ -227,11 +228,10 @@ int b_write(int fd, char * buffer, int count)
 	//part 1
 	if(bytes_remaining_in_my_buffer > count){
 		//copying the buffer into our write buffer at the current index 
-		memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, count);
+		memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer, count);
 		//incrementing the index by how much we wrote
 		fcbArray[fd].index = fcbArray[fd].index + count;
 		return count;
-
 	}
 	//copying data in user buffer into write buffer to fill it up 
 	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
@@ -244,6 +244,8 @@ int b_write(int fd, char * buffer, int count)
 	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
 		//copying 512 bytes from user buffer into the write buffer 
 		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
+
+		LBAwrite()
 		write(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
 		//increment user index by 512 bytes
 		user_index += B_CHUNK_SIZE;
@@ -277,3 +279,59 @@ void b_close(int fd)
 	}
 	
 
+void b_io_write(int fd, char *buf, int SIZE) {
+	struct VCB *vcb = malloc(512);
+  getVCB(vcb);
+
+	int bytes_remaining_in_my_buffer;
+	int bytes_written;
+	int bytes_remaining_in_user_buffer;
+	int user_index; 	//index in user buffer
+	if (startup == 0) b_init();  //Initialize our system
+
+	// check that fd is between 0 and (MAXFCBS-1)
+	if ((fd < 0) || (fd >= MAXFCBS)) {
+		return (-1); 					//invalid file descriptor
+	}
+	//File not open for this descriptor
+	if (fcbArray[fd].linuxFd == -1)	{
+		return -1;
+	}	
+	bytes_remaining_in_my_buffer = B_CHUNK_SIZE - fcbArray[fd].index;
+	
+	//part 1
+	if(bytes_remaining_in_my_buffer > count){
+		// copying the buffer into our write buffer at the current index 
+		memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, count);
+		// incrementing the index by how much we wrote
+		fcbArray[fd].index = fcbArray[fd].index + count;
+		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
+		return count;
+
+	}
+	//copying data in user buffer into write buffer to fill it up 
+	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
+	//now that the buffer is full, we are writing the whole buffer to the file 
+	
+	LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
+	bytes_remaining_in_user_buffer = count - bytes_remaining_in_my_buffer;	//so we don't lose track of count
+	user_index = bytes_remaining_in_my_buffer;
+	
+	//part 2
+	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
+		//copying 512 bytes from user buffer into the write buffer 
+		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
+		fcbArray[fd].blockCount += 1;
+		fcbArray[fd].d_ino[blockCount] = requestFSBlocks(vcb, 1);
+		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino[fcbArray[fd].blockCount]);
+		//increment user index by 512 bytes
+		user_index += B_CHUNK_SIZE;
+		bytes_remaining_in_user_buffer -= B_CHUNK_SIZE;
+	}
+
+	//part 3 
+	memcpy(fcbArray[fd].buf, buffer + user_index, bytes_remaining_in_user_buffer);
+	//update index into fcb array to the number of bytes we just copied
+	fcbArray[fd].index = bytes_remaining_in_user_buffer;
+	return count;
+}
