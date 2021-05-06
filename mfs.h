@@ -54,6 +54,7 @@ typedef struct
 int fs_init();
 int fs_mkdir(const char *pathname, mode_t mode);
 int fs_rmdir(const char *pathname);
+int fs_mv(char * oldPath, char * newPath);
 fdDir * fs_opendir(const char *name);
 struct fs_diriteminfo *fs_readdir(fdDir *dirp);
 int fs_closedir(fdDir *dirp);

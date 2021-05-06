@@ -388,7 +388,11 @@ struct fs_diriteminfo *fs_readdir(fdDir *dirp){
 }
 
 int fs_stat(const char *path, struct fs_stat *buf) {
-    return 0;
+
+    struct stat * path_stat;
+    path_stat = (struct stat *) buf;
+
+    return(stat(path, path_stat));
 }
 
 //return 1 if file, 0 otherwise
@@ -520,4 +524,110 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     free(curr);
 
     return 1;
+}
+
+int fs_createNewPath(char * newPath, struct d_entry oldDirEntry) {
+
+    printf("newpath: %s\n", newPath);
+
+    // Get updated VCB from LBA
+    struct VCB * vcb = malloc(MINBLOCKSIZE);
+    getVCB(vcb);
+
+    uint64_t newDirEntryPosition; 
+
+    // Initialize to number of blocks for a directory
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+
+    // Allocate memory for parent dir
+    Directory * dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
+
+    // Allocate memory for the directory entry
+    d_entry * newDirEntry = malloc(sizeof(* newDirEntry));
+
+    // Read into 'dir' the current working directory
+    LBAread(dir, dirNumBlocks, vcb->LBA_indexOf_rootDir);
+
+    char * token;
+    token = strtok(newPath, "/");
+    int counter = 0;
+    char new_d_name[MAX_NAME_LEN];
+
+    while(counter < dir->size && token != NULL) {
+
+        if(strcmp(token, dir->entries[counter].d_name) == 0) {
+
+            printf("token: %s\n", token);
+            printf("d_name: %s\n", dir->entries[counter].d_name);
+
+            newDirEntryPosition = dir->entries[counter].d_ino;
+            uint64_t newDirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
+
+            printf("newDirEntryPosition %ld\n", newDirEntryPosition);
+
+            LBAread(newDirEntry, newDirEntryNumBlocks, newDirEntryPosition);
+
+            strcpy(new_d_name, token);
+            token = strtok(NULL, "/");
+        }
+        else {
+            counter++;
+        }
+    }
+
+    if(token != NULL) {
+        strcpy(new_d_name, token);
+    }
+
+    dir->size++;
+    printf("\nnewDirEntryPosition: %ld\n", newDirEntryPosition);
+
+    free(dir);
+    free(newDirEntry);
+    free(vcb);
+}
+
+int fs_mv(char * oldPath, char * newPath) {
+
+    // Get updated VCB from LBA
+    struct VCB * vcb = malloc(MINBLOCKSIZE);
+    getVCB(vcb);
+
+    // Initialize to number of blocks for a directory
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+
+    // Allocate memory for parent dir
+    Directory * dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
+
+    // Read into 'dir' the current working directory
+    LBAread(dir, dirNumBlocks, vcb->LBA_indexOf_rootDir);
+
+    // Now tokenize the directory entries in order to determine which entry will be moved
+    char * token;
+    token = strtok(oldPath, "/");
+    int counter = 0;
+
+    while(counter < dir->size && token != NULL) {
+
+        if(strcmp(token, dir->entries[counter].d_name) == 0) {
+
+            printf("token: %s\n", token);
+            printf("d_name: %s\n", dir->entries[counter].d_name);
+
+            token = strtok(NULL, "/");
+
+            // We have found the entry if the token is set equal to NULL
+            if(token == NULL) {
+                fs_createNewPath(newPath, dir->entries[counter]);
+            }
+        }
+        else {
+            counter++;
+        }
+    }
+
+    free(dir);
+    free(vcb);
+
+    return 0;
 }
