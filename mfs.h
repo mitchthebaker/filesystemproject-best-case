@@ -51,7 +51,7 @@ typedef struct
 	unsigned short	curEntry;	/*which directory entry position, like file pos */
 	} fdDir;
 
-int fs_init();
+int fs_init(uint64_t volumeSize, uint64_t blockSize);
 int fs_mkdir(const char *pathname, mode_t mode);
 int fs_rmdir(const char *pathname);
 fdDir * fs_opendir(const char *name);

@@ -31,24 +31,28 @@ uint64_t blockSize;
 u_int64_t blocksizeCache;
 
 
-u_int64_t getBytes(u_int64_t bytes) {
+u_int64_t getBytes(uint64_t bytes) {
     return ((bytes / blocksizeCache) + 1) * blocksizeCache;
 }
 
-//setup 
-int fs_init(){
-    // 'startPartitionSystem()' takes parameters:
-    // 
-    //  char * filename, 
-    //  uint64_t * volSize, 
-    //  uint64_t * blockSize
-    uint64_t volumeSize = 10000000;
-    uint64_t blockSize = 512;
-    blocksizeCache = blockSize;
-    int fs_init_success = -1;
+int temp_init() {
 
-    //file writing into, block size, etc.,
-    startPartitionSystem("fsVolume", &volumeSize, &blockSize);
+    // Get updated VCB from LBA
+    struct VCB * vcb = malloc(MINBLOCKSIZE);
+    getVCB(vcb);
+
+    curDir = vcb->LBA_indexOf_rootDir;
+    blocksizeCache = vcb->sizeOfBlock;
+
+    free(vcb);
+    return 0;
+}
+
+//setup 
+int fs_init(uint64_t volumeSize, uint64_t blockSize) {
+    
+    // Return value, -1 changed to 0 on success
+    int fs_init_success = -1;
    
     //Initialize our VCB struct, allocate enough memory to account for all its parameters
 	VCB * aVCB_ptr = malloc(sizeof(* aVCB_ptr));

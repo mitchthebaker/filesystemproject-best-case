@@ -24,6 +24,9 @@
 #include <string.h>
 
 #include "mfs.h"
+#include "b_io.h"
+#include "bitmap.h"
+#include "fsLow.h"
 
 /***************  START LINUX TESTING CODE FOR SHELL ***************/
 #define TEMP_LINUX 0  //MUST be ZERO for working with your file system
@@ -110,7 +113,7 @@
 #define CMDCP_ON	0
 #define CMDMV_ON	0
 #define CMDMD_ON	1
-#define CMDRM_ON	0
+#define CMDRM_ON	1
 #define CMDCP2L_ON	0
 #define CMDCP2FS_ON	0
 #define CMDCD_ON	1
@@ -346,8 +349,14 @@ int cmd_cp (int argcnt, char *argvec[])
 int cmd_mv (int argcnt, char *argvec[])
 	{
 #if (CMDMV_ON == 1)				
-	return -99;
-	// **** TODO ****  For you to implement	
+	
+	if(argcnt != 3) {
+		printf("Incorrect usage, use mv old_path new_path\n");
+		return -1;
+	}
+	else {
+		return(fs_mv(argvec[1], argvec[2]));
+	}
 #endif
 	return 0;
 	}
@@ -688,12 +697,8 @@ void processcommand (char * cmd)
 
 
 
-int main (int argc, char * argv[])
+int start_shell()
 	{
-		
-	// Init the file system, first and moremost
-	int ret = fs_init();
-	printf("\nVolume initialized, status %d\n\n", ret);
 
 	char * cmdin;
 	char * cmd;
@@ -733,4 +738,6 @@ int main (int argc, char * argv[])
 		free (cmd);
 		cmd = NULL;		
 		} // end while
+		closePartitionSystem();
+		return 0;
 	}

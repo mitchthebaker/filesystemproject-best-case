@@ -50,9 +50,9 @@ int map_initialize(VCB * aVCB_ptr) {
 // Allocate some amount of blocks from the LBA
 uint64_t allocFSBlocks(VCB * aVCB_ptr, uint64_t numBlocksToAlloc, uint64_t blockPos) {
 
-    printf("\n----------------------\n");
+    printf("\n---------------------------------------\n");
     printf("numBlocksToAlloc: %ld.. at block pos %ld\n", numBlocksToAlloc, blockPos);
-    printf("----------------------\n\n");
+    printf("---------------------------------------\n\n");
 
     // Allocate memory for the total number of freespace blocks
     uint8_t * freespaceLBA = malloc((sizeof(uint8_t) * aVCB_ptr->numberOfBlocks));
