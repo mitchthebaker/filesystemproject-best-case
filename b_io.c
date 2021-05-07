@@ -25,10 +25,9 @@ uint64_t buf_size;
 typedef struct b_fcb {
 	int linuxFd;	//holds the systems file descriptor
 	char * buf;		//holds the open file buffer for reading 
-//	int index;		//holds the current position in the buffer
-//	int buflen;		//holds how many valid bytes are in the buffer
 	int blockCount;
   ino_t d_ino;
+  d_entry *entry;
 } b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];
@@ -93,8 +92,8 @@ int b_open(char * filename, int flags)
 		fcbArray[returnFd].linuxFd = -1; 	// Free FCB
 		return -1;
 	}
-	fcbArray[returnFd].blockCount = sizeof(entry) / vcb->sizeOfBlock + 1;
-	LBAread(fcbArray[returnFd].buf, fcbArray[returnFd].blockCount, entry.d_ino);
+	int blockCount = sizeof(entry) / vcb->sizeOfBlock + 1;
+	LBAread(fcbArray[returnFd].buf, blockCount, entry.d_ino);
 	return (returnFd);								// all set
 }
 
@@ -202,12 +201,12 @@ int b_read(int fd, char * buffer, int count)
 
 // Interface to for buffered write taken from Tania's assignemt 5 implementation 
 // and modified to work for file system 
-int b_write(int fd, char * buffer, int count)
-	{
-		int bytes_remaining_in_my_buffer;
-		int bytes_written;
-		int bytes_remaining_in_user_buffer;
-		int user_index; 	//index in user buffer
+int b_write(int fd, char * buffer, int count) {
+	int bytes_remaining_in_my_buffer;
+	int bytes_written;
+	int bytes_remaining_in_user_buffer;
+	int user_index; 	//index in user buffer
+
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
@@ -271,10 +270,15 @@ int b_write(int fd, char * buffer, int count)
 // Interface to for buffered close taken from Tania's assignemt 5 implementation 
 // and modified to work for file system 
 void b_close(int fd) {
+	struct VCB *vcb = malloc(512);
+  getVCB(vcb);
+
 	LBAwrite(fcbArray[fd].buf, fcbArray[fd].blockCount, fcbArray[fd].d_ino); //writing out the rest of what's in our buffer from part 3
+	allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
   free (fcbArray[fd].buf);			// free the associated buffer
   fcbArray[fd].buf = NULL;			// Safety First
   fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
+  free(vcb);
 }
 	
 
@@ -304,15 +308,15 @@ void b_io_write(int fd, char *buf, int SIZE) {
 		memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, count);
 		// incrementing the index by how much we wrote
 		fcbArray[fd].index = fcbArray[fd].index + count;
-		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
 		return count;
 
 	}
-	//copying data in user buffer into write buffer to fill it up 
+	//copying data in usaer buffer into write buffer to fill it up 
 	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
 	//now that the buffer is full, we are writing the whole buffer to the file 
 	
 	LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
+	allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
 	bytes_remaining_in_user_buffer = count - bytes_remaining_in_my_buffer;	//so we don't lose track of count
 	user_index = bytes_remaining_in_my_buffer;
 	
@@ -320,9 +324,10 @@ void b_io_write(int fd, char *buf, int SIZE) {
 	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
 		//copying 512 bytes from user buffer into the write buffer 
 		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
-		fcbArray[fd].blockCount += 1;
+		fcbArray[fd].entry.d_len += 1;
 		fcbArray[fd].d_ino[blockCount] = requestFSBlocks(vcb, 1);
 		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino[fcbArray[fd].blockCount]);
+		allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
 		//increment user index by 512 bytes
 		user_index += B_CHUNK_SIZE;
 		bytes_remaining_in_user_buffer -= B_CHUNK_SIZE;
