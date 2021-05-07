@@ -456,7 +456,7 @@ int fs_delete(char* filename){
     struct VCB *vcb = malloc(512);
     getVCB(vcb);
     d_entry entry;
-    get_entry_from_path(vcb, buf, &entry)
+    get_entry_from_path(vcb, filename, &entry)
 
     uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
     Directory *dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
