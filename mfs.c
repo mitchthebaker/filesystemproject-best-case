@@ -407,11 +407,11 @@ int fs_isFile(char * path){
       if(get_entry_from_path(vcb, path, &entry)==0){
         //success so directory entry for given path has been found
         if(entry.d_type == 'f'){
-            return 1;
             printf("file found");
+            return 0;
 
         }
-        return 0;
+        return 1;
     }
     printf("item by this name does not exist in the file system");
 
@@ -430,15 +430,15 @@ int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
       if(get_entry_from_path(vcb, path, &entry)==0){
         //success so directory entry for given path has been found
         if(entry.d_type == 'd'){
-            return 1;
             printf("directory found");
+            return 0;
 
         }
-        return 0;
+        return 1;
     }
-    printf("item by this name does not exist in the file system");
+    printf("directory by this name does not exist");
 
-    return 0;
+    return 1;
 }
 
 //removes a file
