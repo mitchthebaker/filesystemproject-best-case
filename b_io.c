@@ -148,7 +148,7 @@ int b_io_read(int fd, char * buffer, int count)
 	return fcbArray[fd].entry->len_in_bytes; 
 }
 
-int b_io_write(int fd, char *buf, int SIZE) {
+int b_io_write(int fd, char *buffer, int count) {
 	struct VCB *vcb = malloc(512);
   getVCB(vcb);
 
@@ -156,6 +156,7 @@ int b_io_write(int fd, char *buf, int SIZE) {
 	int bytes_written;
 	int bytes_remaining_in_user_buffer;
 	int user_index; 	//index in user buffer
+	int index = 0;
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
@@ -166,23 +167,22 @@ int b_io_write(int fd, char *buf, int SIZE) {
 	if (fcbArray[fd].linuxFd == -1)	{
 		return -1;
 	}	
-	bytes_remaining_in_my_buffer = B_CHUNK_SIZE - fcbArray[fd].index;
+	bytes_remaining_in_my_buffer = B_CHUNK_SIZE;
 	
 	//part 1
 	if(bytes_remaining_in_my_buffer > count){
 		// copying the buffer into our write buffer at the current index 
-		memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, count);
-		// incrementing the index by how much we wrote
-		fcbArray[fd].index = fcbArray[fd].index + count;
+		memcpy(fcbArray[fd].buf, buffer, count);
 		return count;
-
 	}
+	fcbArray[fd].entry->d_len = 0;
 	//copying data in usaer buffer into write buffer to fill it up 
-	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
+	memcpy(fcbArray[fd].buf + index, buffer, bytes_remaining_in_my_buffer);
 	//now that the buffer is full, we are writing the whole buffer to the file 
 	
 	LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
 	allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
+	
 	bytes_remaining_in_user_buffer = count - bytes_remaining_in_my_buffer;	//so we don't lose track of count
 	user_index = bytes_remaining_in_my_buffer;
 	
@@ -190,9 +190,9 @@ int b_io_write(int fd, char *buf, int SIZE) {
 	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
 		//copying 512 bytes from user buffer into the write buffer 
 		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
-		fcbArray[fd].entry.d_len += 1;
-		fcbArray[fd].d_ino[blockCount] = requestFSBlocks(vcb, 1);
-		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino[fcbArray[fd].blockCount]);
+		fcbArray[fd].entry->d_len += 1;
+		requestFSBlocks(vcb, 1);
+		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino + 1);   // <- HERE
 		allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
 		//increment user index by 512 bytes
 		user_index += B_CHUNK_SIZE;
@@ -202,8 +202,7 @@ int b_io_write(int fd, char *buf, int SIZE) {
 	//part 3 
 	memcpy(fcbArray[fd].buf, buffer + user_index, bytes_remaining_in_user_buffer);
 	//update index into fcb array to the number of bytes we just copied
-	fcbArray[fd].index = bytes_remaining_in_user_buffer;
-	fcbArray[fd].entry->len_in_bytes = SIZE;
+	fcbArray[fd].entry->len_in_bytes = count;
 	return count;
 }
 
