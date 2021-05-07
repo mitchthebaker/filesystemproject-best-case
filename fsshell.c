@@ -110,7 +110,7 @@
 
 /****   SET THESE TO 1 WHEN READY TO TEST THAT COMMAND ****/
 #define CMDLS_ON	1
-#define CMDCP_ON	0
+#define CMDCP_ON	1
 #define CMDMV_ON	1
 #define CMDMD_ON	1
 #define CMDRM_ON	1
@@ -334,8 +334,8 @@ int cmd_cp (int argcnt, char *argvec[])
 	testfs_dest_fd = b_open (dest, O_WRONLY | O_CREAT | O_TRUNC);
 	do 
 		{
-		readcnt = b_io_read (testfs_src_fd, buf, BUFFERLEN);
-		b_io_write (testfs_dest_fd, buf, readcnt);
+		readcnt = b_read (testfs_src_fd, buf, BUFFERLEN);
+		b_write (testfs_dest_fd, buf, readcnt);
 		} while (readcnt == BUFFERLEN);
 	b_close (testfs_src_fd);
 	b_close (testfs_dest_fd);

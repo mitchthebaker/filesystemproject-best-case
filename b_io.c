@@ -65,8 +65,8 @@ int b_getFCB ()
 int b_open(char * filename, int flags)
 {
 	struct VCB *vcb = malloc(512);
-  getVCB(vcb);
-	d_entry entry;
+  	getVCB(vcb);
+	d_entry *entry =malloc(sizeof(d_entry));
 	int fd;
 	int returnFd;
 	
@@ -82,6 +82,7 @@ int b_open(char * filename, int flags)
 	returnFd = b_getFCB();				// get our own file descriptor
 										// check for error - all used FCB's
 	fcbArray[returnFd].linuxFd = returnFd;	// Save the linux file descriptor
+	fcbArray[returnFd].entry = entry;
 	
 	// allocate our read ops buffer
 	fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
@@ -93,7 +94,7 @@ int b_open(char * filename, int flags)
 		return -1;
 	}
 	int blockCount = sizeof(entry) / vcb->sizeOfBlock + 1;
-	LBAread(fcbArray[returnFd].buf, blockCount, entry.d_ino);
+	LBAread(fcbArray[returnFd].buf, blockCount, entry->d_ino);
 	return (returnFd);								// all set
 }
 
@@ -111,17 +112,18 @@ int b_open(char * filename, int flags)
 // and modified to work for file system 
 void b_close(int fd) {
 	struct VCB *vcb = malloc(512);
-  getVCB(vcb);
+  	getVCB(vcb);
 
 	LBAwrite(fcbArray[fd].buf, fcbArray[fd].blockCount, fcbArray[fd].d_ino); //writing out the rest of what's in our buffer from part 3
 	allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
-  free (fcbArray[fd].buf);			// free the associated buffer
-  fcbArray[fd].buf = NULL;			// Safety First
-  fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
-  free(vcb);
+  	free (fcbArray[fd].buf);			// free the associated buffer
+	fcbArray[fd].buf = NULL;			// Safety First
+	fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
+	free(vcb);
+	//free(fcbArray[fd].entry);
 }
 	
-int b_io_read(int fd, char * buffer, int count)
+int b_read(int fd, char * buffer, int count)
 {
 	int bytesRead;				// for our reads
 	int bytesReturned;			// what we will return
@@ -148,7 +150,7 @@ int b_io_read(int fd, char * buffer, int count)
 	return fcbArray[fd].entry->len_in_bytes; 
 }
 
-int b_io_write(int fd, char *buffer, int count) {
+int b_write(int fd, char *buffer, int count) {
 	struct VCB *vcb = malloc(512);
   getVCB(vcb);
 
