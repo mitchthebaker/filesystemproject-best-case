@@ -54,8 +54,8 @@ int main (int argc, char * argv[]) {
     int retVal = startPartitionSystem (filename, &volumeSize, &blockSize);	
 	printf("Opened %s, Volume Size: %llu;  BlockSize: %llu; Return %d\n", filename, (ull_t)volumeSize, (ull_t)blockSize, retVal);
 
-    temp_init();
     fs_init(volumeSize, blockSize);
+    temp_init();
     start_shell();
     
     return 0;
