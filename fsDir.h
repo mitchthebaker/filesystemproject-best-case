@@ -26,9 +26,9 @@ typedef struct d_entry {
     ino_t d_ino;                // file serial # --> offset field? 
     ino_t parent;               
     char d_name[MAX_NAME_LEN];  // name of entry 
-    char d_type;               // type of entry (d = directory, f = file)
-    uint16_t d_len;           // length of entry 
-    bool d_free;               //indicates whether DE is free 
+    char d_type;                // type of entry (d = directory, f = file)
+    uint16_t d_len;             // length of entry 
+    bool d_free;                //indicates whether DE is free 
 } d_entry;
 
 //Directory structure --> root directory to initialize

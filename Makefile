@@ -34,7 +34,7 @@
 #
 
 
-ROOTNAME=fsshell
+ROOTNAME=driver
 HW=
 FOPTION=
 RUNOPTIONS=fsVolume 10000000 512
@@ -42,7 +42,7 @@ CC=gcc
 CFLAGS= -g -I.
 LIBS =pthread
 DEPS = 
-ADDOBJ= fsLow.o fsVCB.o bitmap.o mfs.o 
+ADDOBJ= fsLow.o fsVCB.o bitmap.o mfs.o fsshell.o
 OBJ = $(ROOTNAME)$(HW)$(FOPTION).o $(ADDOBJ)
 
 %.o: %.c $(DEPS)
