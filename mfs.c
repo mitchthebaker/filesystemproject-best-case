@@ -219,9 +219,10 @@ int fs_setcwd(char *buf) {
         //success so directory entry for given path has been found
         //set the cwd var to innode 
         curDir = entry.d_ino;
+        free(vcb);
         return 0;
     }
-
+    free(vcb);
     return 1;
     
     // struct VCB *myVCB = malloc(512);
@@ -412,13 +413,14 @@ int fs_isFile(char * path){
         //success so directory entry for given path has been found
         if(entry.d_type == 'f'){
             printf("file found");
+            free(vcb);
             return 0;
-
         }
+        free(vcb);
         return 1;
     }
     printf("item by this name does not exist in the file system");
-
+    free(vcb);
     return 1;
 }	
 
@@ -431,24 +433,89 @@ int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
     struct VCB *vcb = malloc(512);
     getVCB(vcb);
     d_entry entry;
-      if(get_entry_from_path(vcb, path, &entry)==0){
+        if(get_entry_from_path(vcb, path, &entry)==0){
         //success so directory entry for given path has been found
-        if(entry.d_type == 'd'){
-            printf("directory found");
-            return 0;
+            if(entry.d_type == 'd'){
+                printf("directory found");
+                free(vcb);
+                return 0;
 
         }
+        free(vcb);
         return 1;
     }
     printf("directory by this name does not exist");
-
+    free(vcb);
     return 1;
 }
 
 //removes a file
 int fs_delete(char* filename){
-    //find file (fs open)
+    //Return: -1 if there is no such file to delete(if file is opened)
+    //Return 0 on success
+    struct VCB *vcb = malloc(512);
+    getVCB(vcb);
+    d_entry entry;
+    get_entry_from_path(vcb, buf, &entry)
 
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+    Directory *dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
+    LBAread(dir, dirNumBlocks, entry.parent);
+
+    ino_t rmDirEntryPos;
+    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
+    bool found = false;
+
+    char * token;
+    char * name = malloc(sizeof(char) * strlen(filename));
+    strcpy(name, filename);
+    token = strtok(name, "/");
+    int counter = 0;
+
+    while(counter < dir->size && token != NULL) {
+        if(strcmp(token, dir->entries[counter].d_name) == 0) {
+
+            printf("TOKEN: %s\n", token);
+            printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
+
+            token = strtok(NULL, "/");
+
+            if(token == NULL) {
+        
+                found = true;
+                rmDirEntryPos = counter;
+                rmDirPos = dir->entries[counter].d_ino;
+                
+                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
+                LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
+            }
+        }
+        else {
+            counter++;
+        }
+    }
+
+    if(found) {
+
+        // Deallocate the size of the File to remove from freespace
+        deallocFSBlocks(vcb, (sizeof(d_entry) / MINBLOCKSIZE) + 1), rmDirEntryPos);
+
+        // Now remove the entry from its parent
+        for(int i = rmDirEntryPos; i < dir->size; i++) {
+            dir->entries[i] = dir->entries[i + 1];
+        }
+
+        // Now decrement the size of parent Directory
+        dir->size--;
+
+        LBAwrite(dir, ((sizeof(* dir) / MINBLOCKSIZE) + 1), entry.parent);
+    }
+
+    free(name);
+    free(rmdirEntry);
+    free(dir);
+    free(vcb);
+    return 0;
 }	
 
 
@@ -522,7 +589,7 @@ int fs_mkdir(const char *pathname, mode_t mode) {
     LBAwrite(curr, (sizeof(*curr) / myVCB->sizeOfBlock) + 1, curDir);
 
     free(curr);
-
+    free(myVCB);
     return 1;
 }
 
