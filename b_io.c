@@ -66,7 +66,7 @@ int b_open(char * filename, int flags)
 {
 	struct VCB *vcb = malloc(512);
   	getVCB(vcb);
-	d_entry *entry =malloc(sizeof(d_entry));
+	d_entry *entry = malloc(sizeof(d_entry));
 	int fd;
 	int returnFd;
 	
@@ -75,6 +75,11 @@ int b_open(char * filename, int flags)
 	// lets try to open the file before I do too much other work
 	// open the file with the given flags & make sure the permissions are correct 
 	// attribute: https://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
+
+	if(flags & O_CREAT) {
+		fs_mkdir(filename, 0777);
+		get_entry_from_path(vcb, filename, entry);
+	} else 
 	if (get_entry_from_path(vcb, filename, entry) != 0) {
 		return -1;
 	}
@@ -95,10 +100,8 @@ int b_open(char * filename, int flags)
 	}
 	int blockCount = sizeof(entry) / vcb->sizeOfBlock + 1;
 	LBAread(fcbArray[returnFd].buf, blockCount, entry->d_ino);
-	return (returnFd);								// all set
-	//free(fcbArray->buf);
 	free(vcb);
-	
+	return (returnFd);								// all set
 }
 
 
