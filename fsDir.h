@@ -28,6 +28,7 @@ typedef struct d_entry {
     char d_name[MAX_NAME_LEN];  // name of entry 
     char d_type;                // type of entry (d = directory, f = file)
     uint16_t d_len;             // length of entry 
+    int len_in_bytes;
     bool d_free;                //indicates whether DE is free 
 } d_entry;
 
@@ -40,8 +41,5 @@ typedef struct Directory {
     //d_entry *entries;      //should initialize this way (dynamically allocate) d_entry * entries
 
 } Directory;
-
-
-
 
 #endif
