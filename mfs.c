@@ -451,72 +451,72 @@ int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
 
 //removes a file
 int fs_delete(char* filename){
-    return -1;
+    //return -1;
     //Return: -1 if there is no such file to delete(if file is opened)
     //Return 0 on success
-    // struct VCB *vcb = malloc(512);
-    // getVCB(vcb);
-    // d_entry entry;
-    // get_entry_from_path(vcb, buf, &entry)
+    struct VCB *vcb = malloc(512);
+    getVCB(vcb);
+    d_entry entry;
+    get_entry_from_path(vcb, filename, &entry)
 
-    // uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
-    // Directory *dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
-    // LBAread(dir, dirNumBlocks, entry.parent);
+    uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+    Directory *dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
+    LBAread(dir, dirNumBlocks, entry.parent);
 
-    // ino_t rmDirEntryPos;
-    // d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
-    // bool found = false;
+    ino_t rmDirEntryPos;
+    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
+    bool found = false;
 
-    // char * token;
-    // char * name = malloc(sizeof(char) * strlen(filename));
-    // strcpy(name, filename);
-    // token = strtok(name, "/");
-    // int counter = 0;
+    char * token;
+    char * name = malloc(sizeof(char) * strlen(filename));
+    strcpy(name, filename);
+    token = strtok(name, "/");
+    int counter = 0;
 
-    // while(counter < dir->size && token != NULL) {
-    //     if(strcmp(token, dir->entries[counter].d_name) == 0) {
+    while(counter < dir->size && token != NULL) {
+        if(strcmp(token, dir->entries[counter].d_name) == 0) {
 
-    //         printf("TOKEN: %s\n", token);
-    //         printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
+            printf("TOKEN: %s\n", token);
+            printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
 
-    //         token = strtok(NULL, "/");
+            token = strtok(NULL, "/");
 
-    //         if(token == NULL) {
+            if(token == NULL) {
         
-    //             found = true;
-    //             rmDirEntryPos = counter;
-    //             rmDirPos = dir->entries[counter].d_ino;
+                found = true;
+                rmDirEntryPos = counter;
+                rmDirPos = dir->entries[counter].d_ino;
                 
-    //             uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
-    //             LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
-    //         }
-    //     }
-    //     else {
-    //         counter++;
-    //     }
-    // }
+                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
+                LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
+            }
+        }
+        else {
+            counter++;
+        }
+    }
 
-    // if(found) {
+    if(found) {
 
-    //     // Deallocate the size of the File to remove from freespace
-    //     deallocFSBlocks(vcb, (sizeof(d_entry) / MINBLOCKSIZE) + 1), rmDirEntryPos);
+        // Deallocate the size of the File to remove from freespace
+        deallocFSBlocks(vcb, (sizeof(d_entry) / MINBLOCKSIZE) + 1), rmDirEntryPos);
 
-    //     // Now remove the entry from its parent
-    //     for(int i = rmDirEntryPos; i < dir->size; i++) {
-    //         dir->entries[i] = dir->entries[i + 1];
-    //     }
+        // Now remove the entry from its parent
+        for(int i = rmDirEntryPos; i < dir->size; i++) {
+            dir->entries[i] = dir->entries[i + 1];
+        }
 
-    //     // Now decrement the size of parent Directory
-    //     dir->size--;
+        // Now decrement the size of parent Directory
+        dir->size--;
 
-    //     LBAwrite(dir, ((sizeof(* dir) / MINBLOCKSIZE) + 1), entry.parent);
-    // }
+        LBAwrite(dir, ((sizeof(* dir) / MINBLOCKSIZE) + 1), entry.parent);
+    }
 
-    // free(name);
-    // free(rmdirEntry);
-    // free(dir);
-    // free(vcb);
-    // return 0;
+    free(name);
+    free(rmdirEntry);
+    free(dir);
+    free(vcb);
+    return 0;
 }	
 
 
