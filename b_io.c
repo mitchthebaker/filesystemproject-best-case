@@ -25,11 +25,9 @@ uint64_t buf_size;
 typedef struct b_fcb {
 	int linuxFd;	//holds the systems file descriptor
 	char * buf;		//holds the open file buffer for reading 
-	int index;		//holds the current position in the buffer
-	int buflen;		//holds how many valid bytes are in the buffer
 	int blockCount;
-	int lastBlockByteCount;
-  ino_t d_ino[10];
+  ino_t d_ino;
+  d_entry *entry;
 } b_fcb;
 	
 b_fcb fcbArray[MAXFCBS];
@@ -42,7 +40,7 @@ void b_init ()
         //init fcbArray to all free
         for (int i = 0; i < MAXFCBS; i++)
             {
-            fcbArray[i].linuxFd = -1; //indicates a free fcbArray
+            	fcbArray[i].linuxFd = -1; // indicates a free fcbArray
             }
             
         startup = 1;
@@ -56,6 +54,7 @@ int b_getFCB ()
             if (fcbArray[i].linuxFd == -1)
                 {
                 fcbArray[i].linuxFd = -2; // used but not assigned
+                fcbArray[i].buf = malloc(B_CHUNK_SIZE);
                 return i;		//Not thread safe
                 }
             }
@@ -65,46 +64,65 @@ int b_getFCB ()
 //taken from my (Tania) assignment 5 buffered write implementation of b_open with tweaks 
 int b_open(char * filename, int flags)
 {
+	struct VCB *vcb = malloc(512);
+  getVCB(vcb);
+	d_entry entry;
 	int fd;
 	int returnFd;
 	
 	if (startup == 0) b_init();  //Initialize our system
 	
 	// lets try to open the file before I do too much other work
-	//opne the file with the given flags & make sure the permissions are correct 
-	//attribute: https://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
-	fd = open(filename, flags, 0666);	// --> does this need to be changed for file system? 
-	if (fd  == -1)
-		return (-1);		//error opening filename
+	// open the file with the given flags & make sure the permissions are correct 
+	// attribute: https://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
+	if (get_entry_from_path(vcb, filename, &entry) != 0) {
+		return -1;
+	}
 
 	returnFd = b_getFCB();				// get our own file descriptor
 										// check for error - all used FCB's
-	fcbArray[returnFd].linuxFd = fd;	// Save the linux file descriptor
-	//	release mutex
+	fcbArray[returnFd].linuxFd = returnFd;	// Save the linux file descriptor
 	
-	//allocate our read ops buffer
+	// allocate our read ops buffer
 	fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
-	if (fcbArray[returnFd].buf  == NULL)
-		{
+	if (fcbArray[returnFd].buf  == NULL) {
 		// very bad, we can not allocate our buffer
-		close (fd);							// close linux file
-		fcbArray[returnFd].linuxFd = -1; 	//Free FCB
+		// @Todo change close function to b_close() once its implemented.
+		b_close (fd);												// close linux file 
+		fcbArray[returnFd].linuxFd = -1; 	// Free FCB
 		return -1;
-		}
-		
-	fcbArray[returnFd].buflen = 0; 			// have not read anything yet
-	fcbArray[returnFd].index = 0;			// have not read anything yet
-	return (returnFd);						// all set
+	}
+	int blockCount = sizeof(entry) / vcb->sizeOfBlock + 1;
+	LBAread(fcbArray[returnFd].buf, blockCount, entry.d_ino);
+	return (returnFd);								// all set
 }
 
-// Interface to for buffered read taken from Tania's assignemt 5 implementation 
+
+
+
+
+// int b_seek (int fd, off_t offset, int whence)
+// {
+
+// }    
+
+
+// Interface to for buffered close taken from Tania's assignemt 5 implementation 
 // and modified to work for file system 
-int b_read(int fd, char * buffer, int count)
+void b_close(int fd) {
+	struct VCB *vcb = malloc(512);
+  getVCB(vcb);
+
+	LBAwrite(fcbArray[fd].buf, fcbArray[fd].blockCount, fcbArray[fd].d_ino); //writing out the rest of what's in our buffer from part 3
+	allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
+  free (fcbArray[fd].buf);			// free the associated buffer
+  fcbArray[fd].buf = NULL;			// Safety First
+  fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
+  free(vcb);
+}
+	
+int b_io_read(int fd, char * buffer, int count)
 {
-  //*** TODO ***:  Write buffered read function to return the data and # bytes read
-	//               You must use the Linux System Calls (read) and you must buffer the data
-	//				 in 512 byte chunks. i.e. your linux read must be in B_CHUNK_SIZE
-		
 	int bytesRead;				// for our reads
 	int bytesReturned;			// what we will return
 	int part1, part2, part3;	// holds the three potential copy lengths
@@ -124,162 +142,13 @@ int b_read(int fd, char * buffer, int count)
 		return -1;
 		}	
 		
-	
-	// number of bytes available to copy from buffer
-	remainingBytesInMyBuffer = fcbArray[fd].buflen - fcbArray[fd].index;	
-	
-	// Part 1 is The first copy of data which will be from the current buffer
-	// It will be the lesser of the requested amount or the number of bytes that remain in the buffer
-	
-	if (remainingBytesInMyBuffer >= count)  	//we have enough in buffer
-		{
-		part1 = count;		// completely buffered (the requested amount is smaller than what remains)
-		part2 = 0;
-		part3 = 0;			// Do not need anything from the "next" buffer
-		}
-	else
-		{
-		part1 = remainingBytesInMyBuffer;				//spanning buffer (or first read)
-		
-		// Part 1 is not enough - set part 3 to how much more is needed
-		part3 = count - remainingBytesInMyBuffer;		//How much more we still need to copy
-		
-		// The following calculates how many 512 bytes chunks need to be copied to
-		// the callers buffer from the count of what is left to copy
-		numberOfBlocksToCopy = part3 / B_CHUNK_SIZE;  //This is integer math
-		part2 = numberOfBlocksToCopy * B_CHUNK_SIZE; 
-		
-		// Reduce part 3 by the number of bytes that can be copied in chunks
-		// Part 3 at this point must be less than the block size
-		part3 = part3 - part2; // This would be equivalent to part3 % B_CHUNK_SIZE		
-		}
-				
-	if (part1 > 0)	// memcpy part 1
-		{
-		memcpy (buffer, fcbArray[fd].buf + fcbArray[fd].index, part1);
-		fcbArray[fd].index = fcbArray[fd].index + part1;
-		}
-		
-	if (part2 > 0) 	//blocks to copy direct to callers buffer
-		{
-		bytesRead = read(fcbArray[fd].linuxFd, buffer+part1, numberOfBlocksToCopy*B_CHUNK_SIZE);
-		part2 = bytesRead;  //might be less if we hit the end of the file
-		
-		// Alternative version that only reads one block at a time
-		/******
-		int tempPart2 = 0;
-		for (int i = 0 i < numberOfBlocksToCopy; i++)
-			{
-			bytesRead = read (fcbArray[fd].linuxFd, buffer+part1+tempPart2, B_CHUNK_SIZE);
-			tempPart2 = tempPart2 + bytesRead;
-			}
-		part2 = tempPart2;
-		******/
-		}
-		
-	if (part3 > 0)	//We need to refill our buffer to copy more bytes to user
-		{		
-		//try to read B_CHUNK_SIZE bytes into our buffer
-		bytesRead = read(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
-		
-		// we just did a read into our buffer - reset the offset and buffer length.
-		fcbArray[fd].index = 0;
-		fcbArray[fd].buflen = bytesRead; //how many bytes are actually in buffer
-		
-		if (bytesRead < part3) // not even enough left to satisfy read request from caller
-			part3 = bytesRead;
-			
-		if (part3 > 0)	// memcpy bytesRead
-			{
-			memcpy (buffer+part1+part2, fcbArray[fd].buf + fcbArray[fd].index, part3);
-			fcbArray[fd].index = fcbArray[fd].index + part3; //adjust index for copied bytes
-			}	
-		}
-	bytesReturned = part1 + part2 + part3;
-	return (bytesReturned);	
+	for (int i = 0; i < fcbArray[fd].blockCount; i++) {
+		memcpy(buffer, fcbArray[fd].buf + i * B_CHUNK_SIZE, B_CHUNK_SIZE);
+	}	
+	return fcbArray[fd].entry->len_in_bytes; 
 }
 
-// Interface to for buffered write taken from Tania's assignemt 5 implementation 
-// and modified to work for file system 
-int b_write(int fd, char * buffer, int count)
-	{
-		int bytes_remaining_in_my_buffer;
-		int bytes_written;
-		int bytes_remaining_in_user_buffer;
-		int user_index; 	//index in user buffer
-	if (startup == 0) b_init();  //Initialize our system
-
-	// check that fd is between 0 and (MAXFCBS-1)
-	if ((fd < 0) || (fd >= MAXFCBS))
-		{
-		return (-1); 					//invalid file descriptor
-		}
-		
-	if (fcbArray[fd].linuxFd == -1)		//File not open for this descriptor
-		{
-		return -1;
-		}	
-
-	// Part 1 is what can be filled from the current buffer, which may or may not be enough
-
-	//figuring out how many more bytes we can put in our buffer
-	bytes_remaining_in_my_buffer = B_CHUNK_SIZE - fcbArray[fd].index;
-	
-	//part 1
-	if(bytes_remaining_in_my_buffer > count){
-		//copying the buffer into our write buffer at the current index 
-		memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer, count);
-		//incrementing the index by how much we wrote
-		fcbArray[fd].index = fcbArray[fd].index + count;
-		return count;
-	}
-	//copying data in user buffer into write buffer to fill it up 
-	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
-	//now that the buffer is full, we are writing the whole buffer to the file 
-	write(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
-	bytes_remaining_in_user_buffer = count - bytes_remaining_in_my_buffer;	//so we don't lose track of count
-	user_index = bytes_remaining_in_my_buffer;
-	
-	//part 2
-	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
-		//copying 512 bytes from user buffer into the write buffer 
-		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
-
-		LBAwrite()
-		write(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
-		//increment user index by 512 bytes
-		user_index += B_CHUNK_SIZE;
-		bytes_remaining_in_user_buffer -= B_CHUNK_SIZE;
-	}
-
-	//part 3 
-	memcpy(fcbArray[fd].buf, buffer + user_index, bytes_remaining_in_user_buffer);
-	//update index into fcb array to the number of bytes we just copied
-	fcbArray[fd].index = bytes_remaining_in_user_buffer;
-	return count;
-
-	
-	}
-
-// int b_seek (int fd, off_t offset, int whence)
-// {
-
-// }    
-
-
-// Interface to for buffered close taken from Tania's assignemt 5 implementation 
-// and modified to work for file system 
-void b_close(int fd)
-	{
-        write(fcbArray[fd].linuxFd, fcbArray[fd].buf, fcbArray[fd].index);		//writing out the rest of what's in our buffer from part 3
-        close (fcbArray[fd].linuxFd);		// close the linux file handle
-        free (fcbArray[fd].buf);			// free the associated buffer
-        fcbArray[fd].buf = NULL;			// Safety First
-        fcbArray[fd].linuxFd = -1;			// return this FCB to list of available FCB's 
-	}
-	
-
-void b_io_write(int fd, char *buf, int SIZE) {
+int b_io_write(int fd, char *buffer, int count) {
 	struct VCB *vcb = malloc(512);
   getVCB(vcb);
 
@@ -287,6 +156,7 @@ void b_io_write(int fd, char *buf, int SIZE) {
 	int bytes_written;
 	int bytes_remaining_in_user_buffer;
 	int user_index; 	//index in user buffer
+	int index = 0;
 	if (startup == 0) b_init();  //Initialize our system
 
 	// check that fd is between 0 and (MAXFCBS-1)
@@ -297,23 +167,22 @@ void b_io_write(int fd, char *buf, int SIZE) {
 	if (fcbArray[fd].linuxFd == -1)	{
 		return -1;
 	}	
-	bytes_remaining_in_my_buffer = B_CHUNK_SIZE - fcbArray[fd].index;
+	bytes_remaining_in_my_buffer = B_CHUNK_SIZE;
 	
 	//part 1
 	if(bytes_remaining_in_my_buffer > count){
 		// copying the buffer into our write buffer at the current index 
-		memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, count);
-		// incrementing the index by how much we wrote
-		fcbArray[fd].index = fcbArray[fd].index + count;
-		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
+		memcpy(fcbArray[fd].buf, buffer, count);
 		return count;
-
 	}
-	//copying data in user buffer into write buffer to fill it up 
-	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
+	fcbArray[fd].entry->d_len = 0;
+	//copying data in usaer buffer into write buffer to fill it up 
+	memcpy(fcbArray[fd].buf + index, buffer, bytes_remaining_in_my_buffer);
 	//now that the buffer is full, we are writing the whole buffer to the file 
 	
 	LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino);
+	allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
+	
 	bytes_remaining_in_user_buffer = count - bytes_remaining_in_my_buffer;	//so we don't lose track of count
 	user_index = bytes_remaining_in_my_buffer;
 	
@@ -321,9 +190,10 @@ void b_io_write(int fd, char *buf, int SIZE) {
 	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
 		//copying 512 bytes from user buffer into the write buffer 
 		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
-		fcbArray[fd].blockCount += 1;
-		fcbArray[fd].d_ino[blockCount] = requestFSBlocks(vcb, 1);
-		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino[fcbArray[fd].blockCount]);
+		fcbArray[fd].entry->d_len += 1;
+		requestFSBlocks(vcb, 1);
+		LBAwrite(fcbArray[fd].buf, 1, fcbArray[fd].d_ino + 1);   // <- HERE
+		allocFSBlocks(vcb, 1, fcbArray[fd].d_ino);
 		//increment user index by 512 bytes
 		user_index += B_CHUNK_SIZE;
 		bytes_remaining_in_user_buffer -= B_CHUNK_SIZE;
@@ -332,6 +202,174 @@ void b_io_write(int fd, char *buf, int SIZE) {
 	//part 3 
 	memcpy(fcbArray[fd].buf, buffer + user_index, bytes_remaining_in_user_buffer);
 	//update index into fcb array to the number of bytes we just copied
-	fcbArray[fd].index = bytes_remaining_in_user_buffer;
+	fcbArray[fd].entry->len_in_bytes = count;
 	return count;
 }
+
+
+
+// Interface to for buffered write taken from Tania's assignemt 5 implementation 
+// and modified to work for file system 
+// int b_write(int fd, char * buffer, int count) {
+// 	int bytes_remaining_in_my_buffer;
+// 	int bytes_written;
+// 	int bytes_remaining_in_user_buffer;
+// 	int user_index; 	//index in user buffer
+
+// 	if (startup == 0) b_init();  //Initialize our system
+
+// 	// check that fd is between 0 and (MAXFCBS-1)
+// 	if ((fd < 0) || (fd >= MAXFCBS))
+// 		{
+// 		return (-1); 					//invalid file descriptor
+// 		}
+		
+// 	if (fcbArray[fd].linuxFd == -1)		//File not open for this descriptor
+// 		{
+// 		return -1;
+// 		}	
+
+// 	// Part 1 is what can be filled from the current buffer, which may or may not be enough
+
+// 	//figuring out how many more bytes we can put in our buffer
+// 	bytes_remaining_in_my_buffer = B_CHUNK_SIZE - fcbArray[fd].index;
+	
+// 	//part 1
+// 	if(bytes_remaining_in_my_buffer > count){
+// 		//copying the buffer into our write buffer at the current index 
+// 		memcpy(fcbArray[fd].buf + fcbArray[fd].index, buffer, count);
+// 		//incrementing the index by how much we wrote
+// 		fcbArray[fd].index = fcbArray[fd].index + count;
+// 		return count;
+// 	}
+// 	//copying data in user buffer into write buffer to fill it up 
+// 	memcpy(fcbArray[fd].buf+fcbArray[fd].index, buffer, bytes_remaining_in_my_buffer);
+// 	//now that the buffer is full, we are writing the whole buffer to the file 
+// 	write(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
+// 	bytes_remaining_in_user_buffer = count - bytes_remaining_in_my_buffer;	//so we don't lose track of count
+// 	user_index = bytes_remaining_in_my_buffer;
+	
+// 	//part 2
+// 	while(bytes_remaining_in_user_buffer > B_CHUNK_SIZE){
+// 		//copying 512 bytes from user buffer into the write buffer 
+// 		memcpy(fcbArray[fd].buf, buffer + user_index, B_CHUNK_SIZE);
+
+// 		LBAwrite()
+// 		write(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
+// 		//increment user index by 512 bytes
+// 		user_index += B_CHUNK_SIZE;
+// 		bytes_remaining_in_user_buffer -= B_CHUNK_SIZE;
+// 	}
+
+// 	//part 3 
+// 	memcpy(fcbArray[fd].buf, buffer + user_index, bytes_remaining_in_user_buffer);
+// 	//update index into fcb array to the number of bytes we just copied
+// 	fcbArray[fd].index = bytes_remaining_in_user_buffer;
+// 	return count;
+
+	
+// 	}
+
+
+
+// Interface to for buffered read taken from Tania's assignemt 5 implementation 
+// and modified to work for file system 
+// int b_read(int fd, char * buffer, int count)
+// {
+//   //*** TODO ***:  Write buffered read function to return the data and # bytes read
+// 	//               You must use the Linux System Calls (read) and you must buffer the data
+// 	//				 in 512 byte chunks. i.e. your linux read must be in B_CHUNK_SIZE
+		
+// 	int bytesRead;				// for our reads
+// 	int bytesReturned;			// what we will return
+// 	int part1, part2, part3;	// holds the three potential copy lengths
+// 	int numberOfBlocksToCopy;	// holds the number of whole blocks that are needed
+// 	int remainingBytesInMyBuffer;	// holds how many bytes are left in my buffer						
+	
+// 	if (startup == 0) b_init();  //Initialize our system
+
+// 	// check that fd is between 0 and (MAXFCBS-1)
+// 	if ((fd < 0) || (fd >= MAXFCBS))
+// 		{
+// 		return (-1); 					//invalid file descriptor
+// 		}
+		
+// 	if (fcbArray[fd].linuxFd == -1)		//File not open for this descriptor
+// 		{
+// 		return -1;
+// 		}	
+		
+	
+// 	// number of bytes available to copy from buffer
+// 	remainingBytesInMyBuffer = fcbArray[fd].buflen - fcbArray[fd].index;	
+	
+// 	// Part 1 is The first copy of data which will be from the current buffer
+// 	// It will be the lesser of the requested amount or the number of bytes that remain in the buffer
+	
+// 	if (remainingBytesInMyBuffer >= count)  	//we have enough in buffer
+// 		{
+// 		part1 = count;		// completely buffered (the requested amount is smaller than what remains)
+// 		part2 = 0;
+// 		part3 = 0;			// Do not need anything from the "next" buffer
+// 		}
+// 	else
+// 		{
+// 		part1 = remainingBytesInMyBuffer;				//spanning buffer (or first read)
+		
+// 		// Part 1 is not enough - set part 3 to how much more is needed
+// 		part3 = count - remainingBytesInMyBuffer;		//How much more we still need to copy
+		
+// 		// The following calculates how many 512 bytes chunks need to be copied to
+// 		// the callers buffer from the count of what is left to copy
+// 		numberOfBlocksToCopy = part3 / B_CHUNK_SIZE;  //This is integer math
+// 		part2 = numberOfBlocksToCopy * B_CHUNK_SIZE; 
+		
+// 		// Reduce part 3 by the number of bytes that can be copied in chunks
+// 		// Part 3 at this point must be less than the block size
+// 		part3 = part3 - part2; // This would be equivalent to part3 % B_CHUNK_SIZE		
+// 		}
+				
+// 	if (part1 > 0)	// memcpy part 1
+// 		{
+// 		memcpy (buffer, fcbArray[fd].buf + fcbArray[fd].index, part1);
+// 		fcbArray[fd].index = fcbArray[fd].index + part1;
+// 		}
+		
+// 	if (part2 > 0) 	//blocks to copy direct to callers buffer
+// 		{
+// 		bytesRead = read(fcbArray[fd].linuxFd, buffer+part1, numberOfBlocksToCopy*B_CHUNK_SIZE);
+// 		part2 = bytesRead;  //might be less if we hit the end of the file
+		
+// 		// Alternative version that only reads one block at a time
+// 		/******
+// 		int tempPart2 = 0;
+// 		for (int i = 0 i < numberOfBlocksToCopy; i++)
+// 			{
+// 			bytesRead = read (fcbArray[fd].linuxFd, buffer+part1+tempPart2, B_CHUNK_SIZE);
+// 			tempPart2 = tempPart2 + bytesRead;
+// 			}
+// 		part2 = tempPart2;
+// 		******/
+// 		}
+		
+// 	if (part3 > 0)	//We need to refill our buffer to copy more bytes to user
+// 		{		
+// 		//try to read B_CHUNK_SIZE bytes into our buffer
+// 		bytesRead = read(fcbArray[fd].linuxFd, fcbArray[fd].buf, B_CHUNK_SIZE);
+		
+// 		// we just did a read into our buffer - reset the offset and buffer length.
+// 		fcbArray[fd].index = 0;
+// 		fcbArray[fd].buflen = bytesRead; //how many bytes are actually in buffer
+		
+// 		if (bytesRead < part3) // not even enough left to satisfy read request from caller
+// 			part3 = bytesRead;
+			
+// 		if (part3 > 0)	// memcpy bytesRead
+// 			{
+// 			memcpy (buffer+part1+part2, fcbArray[fd].buf + fcbArray[fd].index, part3);
+// 			fcbArray[fd].index = fcbArray[fd].index + part3; //adjust index for copied bytes
+// 			}	
+// 		}
+// 	bytesReturned = part1 + part2 + part3;
+// 	return (bytesReturned);	
+// }
