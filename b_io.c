@@ -75,7 +75,7 @@ int b_open(char * filename, int flags)
 	// lets try to open the file before I do too much other work
 	// open the file with the given flags & make sure the permissions are correct 
 	// attribute: https://stackoverflow.com/questions/2245193/why-does-open-create-my-file-with-the-wrong-permissions
-	if (get_entry_from_path(vcb, filename, &entry) != 0) {
+	if (get_entry_from_path(vcb, filename, entry) != 0) {
 		return -1;
 	}
 
@@ -85,7 +85,7 @@ int b_open(char * filename, int flags)
 	fcbArray[returnFd].entry = entry;
 	
 	// allocate our read ops buffer
-	fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
+	//fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
 	if (fcbArray[returnFd].buf  == NULL) {
 		// very bad, we can not allocate our buffer
 		// @Todo change close function to b_close() once its implemented.
@@ -96,6 +96,9 @@ int b_open(char * filename, int flags)
 	int blockCount = sizeof(entry) / vcb->sizeOfBlock + 1;
 	LBAread(fcbArray[returnFd].buf, blockCount, entry->d_ino);
 	return (returnFd);								// all set
+	//free(fcbArray->buf);
+	free(vcb);
+	
 }
 
 
@@ -152,7 +155,7 @@ int b_read(int fd, char * buffer, int count)
 
 int b_write(int fd, char *buffer, int count) {
 	struct VCB *vcb = malloc(512);
-  getVCB(vcb);
+  	getVCB(vcb);
 
 	int bytes_remaining_in_my_buffer;
 	int bytes_written;

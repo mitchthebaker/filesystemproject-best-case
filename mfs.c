@@ -457,7 +457,7 @@ int fs_delete(char* filename){
     struct VCB *vcb = malloc(512);
     getVCB(vcb);
     d_entry entry;
-    get_entry_from_path(vcb, filename, &entry)
+    get_entry_from_path(vcb, filename, &entry);
 
     uint64_t dirNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
     Directory *dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
@@ -485,7 +485,7 @@ int fs_delete(char* filename){
         
                 found = true;
                 rmDirEntryPos = counter;
-                rmDirPos = dir->entries[counter].d_ino;
+                ino_t rmDirPos = dir->entries[counter].d_ino;
                 
                 uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
                 LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
@@ -499,7 +499,7 @@ int fs_delete(char* filename){
     if(found) {
 
         // Deallocate the size of the File to remove from freespace
-        deallocFSBlocks(vcb, (sizeof(d_entry) / MINBLOCKSIZE) + 1), rmDirEntryPos);
+        deallocFSBlocks(vcb, ((sizeof(d_entry) / MINBLOCKSIZE) + 1), rmDirEntryPos);
 
         // Now remove the entry from its parent
         for(int i = rmDirEntryPos; i < dir->size; i++) {
