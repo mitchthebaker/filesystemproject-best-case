@@ -1,7 +1,7 @@
 /**************************************************************
 * Class:  CSC-415
 * Name: Mitchel Baker and Tania Nemeth
-* Student ID: 917679066
+* Student ID: 917679066, 920680290 (respective to names listed)
 * Project: Basic File System
 *
 * File: fsVCB.h
