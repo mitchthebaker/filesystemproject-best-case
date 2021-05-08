@@ -175,13 +175,13 @@ char * fs_getcwd(char *buf, size_t size) {
     // New LBAread() updated with index of our root dir
     // Also printed out the current directory name and its parent
 
-    printf("here\n");
-    printf("curDir: %ld\n", curDir);
+    
+    //printf("curDir: %ld\n", curDir);
     //should start at current directory instead of root 
     LBAread(curr, numDirBlocks, curDir);
     // DEBUG prints
-     printf("current dir name: %s\n", curr->name);
-     printf("current dir parent: %ld\n", curr->parent);
+    //printf("current dir name: %s\n", curr->name);
+    //printf("current dir parent: %ld\n", curr->parent);
 
     char **directoryNames = malloc(sizeof(char *) * 10);
     int count = 0;
@@ -192,8 +192,6 @@ char * fs_getcwd(char *buf, size_t size) {
         count++;
         LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curr->parent);
     }
-
-    printf("here now\n");
     
     directoryNames[count] = malloc(sizeof(char) * 256);
     strcpy(directoryNames[count], curr->name);
