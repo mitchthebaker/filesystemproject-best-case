@@ -17,6 +17,7 @@
 #include "b_io.h"
 #include "mfs.h"
 #include "fsVCB.h"
+#include "bitmap.h"
 #define MAXFCBS 20
 #define B_CHUNK_SIZE 512
 uint64_t buf_size;

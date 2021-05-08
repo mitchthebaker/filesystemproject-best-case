@@ -162,7 +162,9 @@ char * fs_getcwd(char *buf, size_t size) {
     struct VCB *myVCB = malloc(512);
     myVCB = getVCB(myVCB);
 
-    Directory *curr = malloc(getBytes(sizeof(*curr)));
+    uint64_t numDirBlocks = (sizeof(Directory) / myVCB->sizeOfBlock) + 1;
+
+    Directory *curr = malloc(numDirBlocks * myVCB->sizeOfBlock);
     // DEBUG prints
     // printf("currentDir: %ld\n", curDir);
     // printf("index of rootDir: %d\n", myVCB->LBA_indexOf_rootDir);
@@ -173,11 +175,13 @@ char * fs_getcwd(char *buf, size_t size) {
     // New LBAread() updated with index of our root dir
     // Also printed out the current directory name and its parent
 
+    
+    //printf("curDir: %ld\n", curDir);
     //should start at current directory instead of root 
-    LBAread(curr, 1, curDir);
+    LBAread(curr, numDirBlocks, curDir);
     // DEBUG prints
-    // printf("current dir name: %s\n", curr->name);
-    // printf("current dir parent: %ld\n", curr->parent);
+    //printf("current dir name: %s\n", curr->name);
+    //printf("current dir parent: %ld\n", curr->parent);
 
     char **directoryNames = malloc(sizeof(char *) * 10);
     int count = 0;
@@ -188,8 +192,6 @@ char * fs_getcwd(char *buf, size_t size) {
         count++;
         LBAread(curr, (sizeof(Directory) / myVCB->sizeOfBlock) + 1, curr->parent);
     }
-
-
     
     directoryNames[count] = malloc(sizeof(char) * 256);
     strcpy(directoryNames[count], curr->name);
@@ -248,17 +250,6 @@ int fs_rmdir(const char * pathname) {
     struct VCB * vcb = malloc(MINBLOCKSIZE);
     getVCB(vcb);
 
-    // Pointer from fs_opendir
-    fdDir * ret;
-
-    // Determine where the specified path originates from, open the directory accordingly
-    if(pathname[0] != '/') {
-        ret = fs_opendir(pathname);
-    }
-    else {
-        ret = fs_opendir("/");
-    }
-
     // Initialize to number of blocks for a directory
     uint64_t dirNumBlocks = (sizeof(fdDir) / vcb->sizeOfBlock) + 1;
 
@@ -271,9 +262,6 @@ int fs_rmdir(const char * pathname) {
     // Allocate memory for parent dir
     Directory * dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
 
-    // Allocate memory for the directory entry to remove
-    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
-
     // Only set to true if we have found the directory entry we want to remove
     bool found = false;
 
@@ -282,8 +270,9 @@ int fs_rmdir(const char * pathname) {
 
     // Begin tokenization to find the directory entry to remove
     char * token;
-    char * name = malloc(sizeof(char) * strlen(pathname));
-    strcpy(name, pathname);
+    size_t pathSize = strlen(pathname);
+    char * name = malloc(pathSize + 1);
+    memcpy(name, pathname, pathSize + 1);
     token = strtok(name, "/");
     int counter = 0;
 
@@ -292,19 +281,17 @@ int fs_rmdir(const char * pathname) {
         // '0' indicates we have found the directory entry which matches the 'pathname' specified
         if(strcmp(token, dir->entries[counter].d_name) == 0) {
 
-            printf("TOKEN: %s\n", token);
-            printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
+            // DEBUG for seeing if token and d_name match
+            //printf("TOKEN: %s\n", token);
+            //printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
 
             token = strtok(NULL, "/");
 
             if(token == NULL) {
-        
+                
                 found = true;
                 rmDirEntryPos = counter;
                 rmDirPos = dir->entries[counter].d_ino;
-                
-                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
-                LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
             }
         }
         else {
@@ -330,11 +317,7 @@ int fs_rmdir(const char * pathname) {
         LBAwrite(dir, ((sizeof(* dir) / MINBLOCKSIZE) + 1), vcb->LBA_indexOf_rootDir);
     }
 
-    // Now free the fsDir pointer allocated by fs_opendir
-    fs_closedir(ret);
-
     free(name);
-    free(rmdirEntry);
     free(dir);
     free(vcb);
     return 0;
@@ -412,16 +395,16 @@ int fs_isFile(char * path){
       if(get_entry_from_path(vcb, path, &entry)==0){
         //success so directory entry for given path has been found
         if(entry.d_type == 'f'){
-            printf("file found");
+            printf("file found\n");
             free(vcb);
-            return 0;
+            return 1;
         }
         free(vcb);
-        return 1;
+        return 0;
     }
     printf("item by this name does not exist in the file system");
     free(vcb);
-    return 1;
+    return 0;
 }	
 
 int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
@@ -436,17 +419,17 @@ int fs_isDir(char * path) {		//return 1 if directory, 0 otherwise
         if(get_entry_from_path(vcb, path, &entry)==0){
         //success so directory entry for given path has been found
             if(entry.d_type == 'd'){
-                printf("directory found");
+                printf("directory found\n");
                 free(vcb);
-                return 0;
+                return 1;
 
         }
         free(vcb);
-        return 1;
+        return 0;
     }
     printf("directory by this name does not exist");
     free(vcb);
-    return 1;
+    return 0;
 }
 
 //removes a file
@@ -464,7 +447,7 @@ int fs_delete(char* filename){
     LBAread(dir, dirNumBlocks, entry.parent);
 
     ino_t rmDirEntryPos;
-    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
+    //d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
     bool found = false;
 
     char * token;
@@ -487,8 +470,8 @@ int fs_delete(char* filename){
                 rmDirEntryPos = counter;
                 ino_t rmDirPos = dir->entries[counter].d_ino;
                 
-                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
-                LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
+                //uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
+                //LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
             }
         }
         else {
@@ -513,11 +496,11 @@ int fs_delete(char* filename){
     }
 
     free(name);
-    free(rmdirEntry);
+    //free(rmdirEntry);
     free(dir);
     free(vcb);
     return 0;
-}	
+}
 
 
 int fs_close(){
@@ -611,10 +594,15 @@ int fs_createNewPath(char * newPath, struct d_entry oldDirEntry) {
     // Read into 'dir' the current working directory
     LBAread(dir, dirNumBlocks, vcb->LBA_indexOf_rootDir);
 
-    uint64_t entryNumBlocks = (sizeof(d_entry) / vcb->sizeOfBlock) + 1;
+    //uint64_t entryNumBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+    //printf("entryNumBlocks: %ld\n", entryNumBlocks);
+
+    uint64_t newDirBlocks = (sizeof(Directory) / vcb->sizeOfBlock) + 1;
+    printf("newDirBlocks: %ld\n", newDirBlocks);
 
     // Allocate memory for the directory entry
-    d_entry * newDirEntry = malloc(entryNumBlocks * vcb->sizeOfBlock);
+    //d_entry * newDirEntry = malloc(entryNumBlocks * vcb->sizeOfBlock);
+    Directory * newDir = malloc(newDirBlocks * vcb->sizeOfBlock);
 
     char * token;
     token = strtok(newPath, "/");
@@ -640,19 +628,13 @@ int fs_createNewPath(char * newPath, struct d_entry oldDirEntry) {
             printf("d_name: %s\n", dir->entries[counter].d_name);
             printf("d_ino: %ld\n", dir->entries[counter].d_ino);
 
-             // Get the total number of blocks the new Directory will take up
-            uint64_t newDirBlocks = (sizeof(* dir) / vcb->sizeOfBlock) + 1;
-
-            // Request 'newDirBlocks' amount of freespace from bitmap, return value will be the block position in the LBA
-            uint64_t newDirPosition = requestFSBlocks(vcb, newDirBlocks);
-
-            // Now allocate the freespace blocks onto the LBA
-            allocFSBlocks(vcb, newDirBlocks, newDirPosition);
-
             // Now that we have the directory to move 'oldDirEntry' into, create a new Directory for it
-            Directory * newDirectory = malloc(sizeof(* newDirectory));
+            Directory * newDirectory = malloc(newDirBlocks * vcb->sizeOfBlock);
+
+            LBAread(newDirectory, newDirBlocks, dir->entries[counter].d_ino);
+
             strcpy(newDirectory->name, dir->entries[counter].d_name);
-            newDirectory->parent = dir->entries[counter].d_ino;
+            newDirectory->parent = curDir;
 
             // Now, initialize the entries in our new directory
             for(int idx = 0; idx < MAX_NUM_ENTRIES; idx++) {
@@ -664,29 +646,56 @@ int fs_createNewPath(char * newPath, struct d_entry oldDirEntry) {
                     strcpy(newDirectory->entries[0].d_name, ".");
                     newDirectory->entries[0].d_free = false;
                     newDirectory->entries[0].d_type = 'd';
-                    newDirectory->entries[0].d_ino = newDirPosition;
+                    newDirectory->entries[0].d_ino = dir->entries[counter].d_ino;
 
                     strcpy(newDirectory->entries[1].d_name, "..");
                     newDirectory->entries[1].d_free = false;
                     newDirectory->entries[1].d_type = 'd';
-                    newDirectory->entries[1].d_ino = newDirectory->parent;
+                    newDirectory->entries[1].d_ino = curDir;
 
-                    strcpy(newDirectory->entries[idx].d_name, oldDirEntry.d_name);
+                    strcpy(newDirectory->entries[2].d_name, oldDirEntry.d_name);
                     newDirectory->entries[2].d_ino = oldDirEntry.d_ino;
-                    newDirectory->entries[2].parent = newDirPosition;
+                    newDirectory->entries[2].parent = dir->entries[counter].d_ino;
                     newDirectory->entries[2].d_type = oldDirEntry.d_type;
                     newDirectory->entries[2].d_len = oldDirEntry.d_len;
                     newDirectory->entries[2].d_free = oldDirEntry.d_free;
+
+                    LBAread(newDir, newDirBlocks, oldDirEntry.d_ino);
+
+                    strcpy(newDir->name, oldDirEntry.d_name);
+                    newDir->size = 2;
+                    newDir->parent = dir->entries[counter].d_ino;
+
+                    for(int i = 0; i < MAX_NUM_ENTRIES; i++) {
+                        newDir->entries[i].parent = oldDirEntry.d_ino;
+                        newDir->entries[i].d_free = true;
+                    }
+
+                    strcpy(newDir->entries[0].d_name, ".");
+                    newDir->entries[0].d_free = false;
+                    newDir->entries[0].d_type = 'd';
+                    newDir->entries[0].d_ino = oldDirEntry.d_ino;
+
+                    strcpy(newDirectory->entries[1].d_name, "..");
+                    newDirectory->entries[1].d_free = false;
+                    newDirectory->entries[1].d_type = 'd';
+                    newDirectory->entries[1].d_ino = dir->entries[counter].d_ino;
+                    
+
+                    printf("newDir->name: %s\n", newDir->name);
+                    printf("newDir->parent: %ld\n", newDir->parent);
+
+                    LBAwrite(newDir, newDirBlocks, oldDirEntry.d_ino);
 
                     newDirectory->size = 3;
                     idx = 2;
                 }
 
-                newDirectory->entries[idx].parent = 0;
+                newDirectory->entries[idx].parent = dir->entries[counter].d_ino;
                 newDirectory->entries[idx].d_free = true;
             }
 
-            LBAwrite(newDirectory, newDirBlocks, newDirPosition);
+            LBAwrite(newDirectory, newDirBlocks, newDir->parent);
 
             free(newDirectory);
 
@@ -699,7 +708,7 @@ int fs_createNewPath(char * newPath, struct d_entry oldDirEntry) {
     }
 
     free(dir);
-    free(newDirEntry);
+    free(newDir);
     free(vcb);
 }
 
@@ -710,7 +719,7 @@ int fs_removeOldEntry(Directory * dir, ino_t entry_ino, int counter) {
     getVCB(vcb);
 
     // Deallocate the size of the Directory to remove from freespace
-    deallocFSBlocks(vcb, ((sizeof(Directory) / MINBLOCKSIZE) + 1), entry_ino);
+    //deallocFSBlocks(vcb, ((sizeof(Directory) / MINBLOCKSIZE) + 1), entry_ino);
 
     // Now remove the directory entry from its parent
     for(int i = counter; i < dir->size; i++) {

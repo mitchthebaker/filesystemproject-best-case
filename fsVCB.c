@@ -7,7 +7,8 @@
 * File: fsVCB.c
 *
 * Description: This is the implementation for writing our volume 
-*              control block to the LBA.
+*              control block to the LBA, in addition to creating 
+*              and initializing the root directory.              
 *
 **************************************************************/
 
@@ -27,11 +28,17 @@
 // Expand upon the VCB and add any new parameters in 'fsVCB.h' if necessary 
 int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
 
-    char title[] = "VCB Header - Best Case";
+    // Copy the title into the VCB
+    char title[] = "Best Case - File System Project";
     strcpy(aVCB_ptr->vcbTitle, title);
 
+    // Divide volumeSize by blockSize to get the total number of blocks
     aVCB_ptr->numberOfBlocks = volumeSize / blockSize;
+
+    // Size per block, specified when starting up the file system (argv[3])
     aVCB_ptr->sizeOfBlock = blockSize;
+
+    // Initialize the VCB's magic number to 0x20214150
     aVCB_ptr->magicNumber = MAGIC_NUMBER;
 
     // Determine if any of the parameters we set for our VCB are not greater than 0
@@ -45,30 +52,13 @@ int initVCB(VCB * aVCB_ptr, uint64_t volumeSize, uint64_t blockSize) {
 //Tania 
 Directory * createAndInitDir (ino_t parent, VCB * aVCB_ptr, Directory * rootDir) {
 
-    // Commented this portion out since in fsDir.h we set d_entry entries[MAX_NUM_ENTRIES] to length
-    // MAX_NUM_ENTRIES. Leaving the dynamic allocation of 'entries' parameter below for reference
-    // if we decide to reincorporate this into our code. 
-    //
-    //function that will create and initizalize empty directory entries in memory 
-    /*d_entry * dir;     //allocate space for the directory 
-
-     //need to get the # of directory entries and size of DE to figure out # of bytes to allocate
-    int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
-
-     //multiply and add (block size - 1) then / by block size to get the # of blocks 
-    int num_blocks = (size_dir_entries + (aVCB_ptr->sizeOfBlock -1)) / aVCB_ptr->sizeOfBlock;
-
-    //populate with initizalied, default, empty directory entries (malloc and init array of DE's to default empty entries)
-    dir = malloc(num_blocks * aVCB_ptr->sizeOfBlock);*/
-
-
     // Initialize root directory's name to '/'?
     strcpy(rootDir->name, "/");
 
     // Set root's parent to NULL since it has no parent
     rootDir->parent = NULL;
 
-    //need to indicate that the entries are free and set the parent
+    // need to indicate that the entries are free and set the parent
     for(int i = 0; i < MAX_NUM_ENTRIES; i++) {
         rootDir->entries[i].parent = parent;
         rootDir->entries[i].d_free = true;
@@ -79,13 +69,9 @@ Directory * createAndInitDir (ino_t parent, VCB * aVCB_ptr, Directory * rootDir)
 }
 
 uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap){
-    Directory * root = createAndInitDir(0, aVCB_ptr, rootDir);
 
-    /*int size_dir_entries = (MAX_NUM_ENTRIES * sizeof(d_entry)); 
-     //multiply and add (block size - 1) then / by block size to get the # of blocks 
-    int num_blocks = ((size_dir_entries + (aVCB_ptr->sizeOfBlock - 1)) / aVCB_ptr->sizeOfBlock) + 1;
-    printf("size of numblocks: %ld\n", ((size_dir_entries + (aVCB_ptr->sizeOfBlock - 1)) / aVCB_ptr->sizeOfBlock));
-    printf("numblocks: %d\n", num_blocks);*/
+    // First and foremost, create and then initialize the root directory with basic attributes
+    Directory * root = createAndInitDir(0, aVCB_ptr, rootDir);
 
     //location is LBA
     //size is # of dir entries * size of directory entry
@@ -93,15 +79,14 @@ uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap)
     // Now that the root dir is initialized, get the total size of root, divide by the block size, + 1 
     // to get the total number of root blocks to allocate
     uint64_t rootBlocks = (sizeof(* root) / aVCB_ptr->sizeOfBlock) + 1;
-    printf("\nrootBlocks: %ld\n", rootBlocks);
 
     // Request the number of root blocks to allocate from freespace
     uint64_t rootPosition = requestFSBlocks(aVCB_ptr, rootBlocks);
 
     // Then allocate the freespace blocks for root
     uint64_t blocksAllocated = allocFSBlocks(aVCB_ptr, rootBlocks, rootPosition);
-    printf("blocks allocated: %ld\n", blocksAllocated);
 
+    // Set root directory size = 2 since we are initializing with '.' / '..' entries
     root->size = 2;
 
     //create directory entry for .
@@ -130,12 +115,10 @@ uint64_t initRootDir(VCB * aVCB_ptr, Directory * rootDir, uint64_t sizeOfBitmap)
     aVCB_ptr->LBA_indexOf_rootDir = rootPosition;
     LBAwrite(aVCB_ptr, 1, 0);
 
-    //root->parent = LBA;
-    //aVCB_ptr->LBA_indexOf_freeSpace = LBA + num_blocks;
     //https://www.thegeekstuff.com/2012/06/c-directory/
-    // fs_mkdir("/", 0777);
-}
 
+    return 0;
+}
 //end Tania
 
 // Load our VCB into the LBA at logical block 0
