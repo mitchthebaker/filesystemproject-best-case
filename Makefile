@@ -34,7 +34,7 @@
 #
 
 
-ROOTNAME=driver
+ROOTNAME=fsshell
 HW=
 FOPTION=
 RUNOPTIONS=fsVolume 10000000 512
