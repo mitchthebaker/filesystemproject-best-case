@@ -35,35 +35,53 @@ typedef u_int32_t uint32_t;
 
 struct fs_diriteminfo
 	{
-	ino_t d_ino;
-    unsigned short d_reclen;    /* length of this record */
-    unsigned char fileType;    
-    char d_name[256]; 			/* filename max filename is 255 characters */
+	ino_t d_ino;				// Directory item inode
+    unsigned short d_reclen;    // Length of this record
+    unsigned char fileType;     // The directory item's file type
+    char d_name[256]; 			// Filename max filename is 255 characters
 	};
 
 
 typedef struct
 	{
-	/*****TO DO:  Fill in this structure with what your open/read directory needs  *****/
-	unsigned short  d_reclen;		/*length of this record */
-	struct fs_diriteminfo * entries;
-	unsigned short numEntries;
-	unsigned short	curEntry;	/*which directory entry position, like file pos */
+	unsigned short  d_reclen;		   // Length of this record
+	struct fs_diriteminfo * entries;   // Directory entries
+	unsigned short numEntries;		   // Total number of directory entries
+	unsigned short	curEntry;	       // Which directory entry position; like file pos 
 	} fdDir;
 
+// Initialize our file system
+// Pass in volumeSize and blockSize for formatting the volume
 int fs_init(uint64_t volumeSize, uint64_t blockSize);
-int fs_mkdir(const char *pathname, mode_t mode);
-int fs_rmdir(const char *pathname);
-int fs_mv(char * oldPath, char * newPath);
-fdDir * fs_opendir(const char *name);
-struct fs_diriteminfo *fs_readdir(fdDir *dirp);
-int fs_closedir(fdDir *dirp);
-//pwd
-//cd 
-//ls 
-//md 
 
+// Make a new directory
+// For parameters, pass in the directory name and a mode if any
+int fs_mkdir(const char *pathname, mode_t mode);
+
+// Remove a directory
+// For parameters, pass in the directory name to remove
+int fs_rmdir(const char *pathname);
+
+// Move a directory in the file system
+// For parameters, pass in the directory's old path and its new path
+int fs_mv(char * oldPath, char * newPath);
+
+// Open a directory in the file system
+// For parameters, pass in the directory's name
+fdDir * fs_opendir(const char *name);
+
+// Read a directory in the file system
+// For parameters, pass in the directory to be read 
+struct fs_diriteminfo *fs_readdir(fdDir *dirp);
+
+// Close a directory in the file system
+// For parameters, pass in the directory to be closed
+int fs_closedir(fdDir *dirp);
+
+// Get the current working directory in the file system (pwd)
 char * fs_getcwd(char *buf, size_t size);
+
+// Set the current working directory in the file system (cd)
 int fs_setcwd(char *buf);   //linux chdir
 int fs_isFile(char * path);	//return 1 if file, 0 otherwise
 int fs_isDir(char * path);		//return 1 if directory, 0 otherwise
@@ -83,6 +101,9 @@ struct fs_stat
 	};
 
 int fs_stat(const char *path, struct fs_stat *buf);
+
+// Temporary storage for vcb, current directory, and block size
+int temp_init();
 
 #endif
 

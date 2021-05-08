@@ -6,9 +6,9 @@
 *
 * File: fsDir.h
 *
-* Description: This is the header file for fsVCB.c; the structures 
-*              declared below are necessary for
-*              initializing our directory system and the root directory
+* Description: This is the header file which contains the structures 
+*              necessary for initializing our directory system and 
+*              the root directory.
 *
 **************************************************************/
 #ifndef _FSDIR_H
@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+
 #define MAX_NUM_ENTRIES 100
 #define MAX_NAME_LEN 30
 

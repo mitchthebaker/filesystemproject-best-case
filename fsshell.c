@@ -738,6 +738,8 @@ int start_shell()
 		free (cmd);
 		cmd = NULL;		
 		} // end while
-		closePartitionSystem();
+
+		// Close the file system
+		fs_close();
 		return 0;
 	}

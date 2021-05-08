@@ -1,7 +1,7 @@
 /**************************************************************
 * Class:  CSC-415-01
-* Name: Tania Nemeth
-* Student ID: 920680290
+* Name: Tania Nemeth, Battulga Tsogtgerel
+* Student ID: 920680290, 920203983 (respectively to name order)
 * Project: File System Project
 *
 * File: b_io.c
