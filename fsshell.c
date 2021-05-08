@@ -23,10 +23,13 @@
 #include <getopt.h>
 #include <string.h>
 
-#include "mfs.h"
 #include "b_io.h"
-#include "bitmap.h"
+#include "mfs.h"
 #include "fsLow.h"
+#include "fsVCB.h"
+#include "bitmap.h"
+#include "fsDir.h"
+#include "fsshell.h"
 
 /***************  START LINUX TESTING CODE FOR SHELL ***************/
 #define TEMP_LINUX 0  //MUST be ZERO for working with your file system
@@ -695,12 +698,42 @@ void processcommand (char * cmd)
 	cmdv = NULL;
 	}
 
+// Main program for running the file system
+int main (int argc, char * argv[]) {
 
+    // 1st argument: volume file
+    // 2nd argument: volume size
+    // 3rd argument: block size 
+    char * filename;
+	uint64_t volumeSize;
+	uint64_t blockSize;
 
-int start_shell()
-	{
+    // Total args should be 4
+    if (argc >= 3) {
+		
+        filename = argv[1];
+		volumeSize = atoll (argv[2]);
+		blockSize = atoll (argv[3]);
+	}
 
-	char * cmdin;
+    // Have user rerun the program because they've inputted incorrect arguments
+	else {
+		
+        printf ("Usage: ./driver volumeFileName volumeSize blockSize\n");
+		return -1;
+	}
+
+    // Start up the partition system
+    int retVal = startPartitionSystem (filename, &volumeSize, &blockSize);	
+	printf("Opened %s, Volume Size: %llu;  BlockSize: %llu; Return %d\n", filename, (ull_t)volumeSize, (ull_t)blockSize, retVal);
+
+    // Initialize the file system
+    fs_init(volumeSize, blockSize);
+
+    // Initialize temporary storage for vcb
+    temp_init();
+
+    char * cmdin;
 	char * cmd;
 	HIST_ENTRY *he;
 		
@@ -742,4 +775,4 @@ int start_shell()
 		// Close the file system
 		fs_close();
 		return 0;
-	}
+}
