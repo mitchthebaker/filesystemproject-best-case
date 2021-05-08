@@ -26,6 +26,7 @@ typedef struct b_fcb {
 	int linuxFd;	//holds the systems file descriptor
 	char * buf;		//holds the open file buffer for reading 
 	int blockCount;
+	int offset;
   ino_t d_ino;
   d_entry *entry;
 } b_fcb;
@@ -41,6 +42,7 @@ void b_init ()
         for (int i = 0; i < MAXFCBS; i++)
             {
             	fcbArray[i].linuxFd = -1; // indicates a free fcbArray
+				
             }
             
         startup = 1;
@@ -69,6 +71,7 @@ int b_open(char * filename, int flags)
 	d_entry *entry = malloc(sizeof(d_entry));
 	int fd;
 	int returnFd;
+
 	
 	if (startup == 0) b_init();  //Initialize our system
 	
@@ -88,6 +91,7 @@ int b_open(char * filename, int flags)
 										// check for error - all used FCB's
 	fcbArray[returnFd].linuxFd = returnFd;	// Save the linux file descriptor
 	fcbArray[returnFd].entry = entry;
+	fcbArray[returnFd].offset = 0;
 	
 	// allocate our read ops buffer
 	//fcbArray[returnFd].buf = malloc(B_CHUNK_SIZE);
@@ -102,6 +106,30 @@ int b_open(char * filename, int flags)
 	LBAread(fcbArray[returnFd].buf, blockCount, entry->d_ino);
 	free(vcb);
 	return (returnFd);								// all set
+}
+
+int b_seek (int fd, off_t offset, int whence)
+{
+	//seek_set (offset)
+	if(whence == SEEK_SET){
+		fcbArray[fd].offset = offset;
+		return 0;
+
+	}
+	//seek_cur (cur + offset)
+	if(whence == SEEK_CUR){
+		fcbArray[fd].offset += offset;
+		return 0;
+
+	}
+
+	//seek_end (size of file + offset)
+	if(whence == SEEK_END){
+		fcbArray[fd].offset = fcbArray[fd].entry->d_len + offset;
+		return 0;
+
+	}
+	return 1;
 }
 
 
