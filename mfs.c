@@ -250,17 +250,6 @@ int fs_rmdir(const char * pathname) {
     struct VCB * vcb = malloc(MINBLOCKSIZE);
     getVCB(vcb);
 
-    // Pointer from fs_opendir
-    /*fdDir * ret;
-
-    // Determine where the specified path originates from, open the directory accordingly
-    if(pathname[0] != '/') {
-        ret = fs_opendir(pathname);
-    }
-    else {
-        ret = fs_opendir("/");
-    }*/
-
     // Initialize to number of blocks for a directory
     uint64_t dirNumBlocks = (sizeof(fdDir) / vcb->sizeOfBlock) + 1;
 
@@ -273,9 +262,6 @@ int fs_rmdir(const char * pathname) {
     // Allocate memory for parent dir
     Directory * dir = malloc(dirNumBlocks * vcb->sizeOfBlock);
 
-    // Allocate memory for the directory entry to remove
-    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
-
     // Only set to true if we have found the directory entry we want to remove
     bool found = false;
 
@@ -286,7 +272,6 @@ int fs_rmdir(const char * pathname) {
     char * token;
     size_t pathSize = strlen(pathname);
     char * name = malloc(pathSize + 1);
-    //strcpy(name, pathname);
     memcpy(name, pathname, pathSize + 1);
     token = strtok(name, "/");
     int counter = 0;
@@ -296,22 +281,17 @@ int fs_rmdir(const char * pathname) {
         // '0' indicates we have found the directory entry which matches the 'pathname' specified
         if(strcmp(token, dir->entries[counter].d_name) == 0) {
 
-            printf("TOKEN: %s\n", token);
-            printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
+            // DEBUG for seeing if token and d_name match
+            //printf("TOKEN: %s\n", token);
+            //printf("dir->entries[counter].d_name: %s\n", dir->entries[counter].d_name);
 
-            printf("here1\n");
             token = strtok(NULL, "/");
-            printf("here2, %s\n", token);
 
             if(token == NULL) {
                 
-                printf("here");
                 found = true;
                 rmDirEntryPos = counter;
                 rmDirPos = dir->entries[counter].d_ino;
-                
-                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
-                LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
             }
         }
         else {
@@ -337,11 +317,7 @@ int fs_rmdir(const char * pathname) {
         LBAwrite(dir, ((sizeof(* dir) / MINBLOCKSIZE) + 1), vcb->LBA_indexOf_rootDir);
     }
 
-    // Now free the fsDir pointer allocated by fs_opendir
-    //fs_closedir(ret);
-
     free(name);
-    free(rmdirEntry);
     free(dir);
     free(vcb);
     return 0;
@@ -471,7 +447,7 @@ int fs_delete(char* filename){
     LBAread(dir, dirNumBlocks, entry.parent);
 
     ino_t rmDirEntryPos;
-    d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
+    //d_entry * rmdirEntry = malloc(sizeof(* rmdirEntry));
     bool found = false;
 
     char * token;
@@ -494,8 +470,8 @@ int fs_delete(char* filename){
                 rmDirEntryPos = counter;
                 ino_t rmDirPos = dir->entries[counter].d_ino;
                 
-                uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
-                LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
+                //uint64_t dirEntryNumBlocks = (sizeof(dir->entries[counter]) / vcb->sizeOfBlock) + 1;
+                //LBAread(rmdirEntry, dirEntryNumBlocks, rmDirPos);
             }
         }
         else {
@@ -520,7 +496,7 @@ int fs_delete(char* filename){
     }
 
     free(name);
-    free(rmdirEntry);
+    //free(rmdirEntry);
     free(dir);
     free(vcb);
     return 0;
